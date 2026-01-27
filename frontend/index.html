@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 금융 데이터 비교</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>실시간 금융 데이터 비교</h1>
+        <div class="connection-status">
+            <span id="connection-status" class="status-badge status-disconnected">연결 중</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Gold Section -->
+        <section class="asset-section">
+            <h2 class="asset-title">Gold (XAU/USD)</h2>
+            <div class="provider-grid">
+                <!-- EODHD -->
+                <div class="provider-card">
+                    <h3 class="provider-name">EODHD</h3>
+                    <div class="price-display" data-provider="eodhd" data-asset="gold">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+
+                <!-- Massive.com -->
+                <div class="provider-card">
+                    <h3 class="provider-name">Massive.com</h3>
+                    <div class="price-display" data-provider="massive" data-asset="gold">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+
+                <!-- Twelve Data -->
+                <div class="provider-card">
+                    <h3 class="provider-name">Twelve Data</h3>
+                    <div class="price-display" data-provider="twelve_data" data-asset="gold">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="statistics">
+                <div class="stat-item">
+                    <span class="stat-label">평균:</span>
+                    <span class="stat-value" id="gold-avg">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최고:</span>
+                    <span class="stat-value" id="gold-max">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최저:</span>
+                    <span class="stat-value" id="gold-min">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">스프레드:</span>
+                    <span class="stat-value" id="gold-spread">--</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Silver Section -->
+        <section class="asset-section">
+            <h2 class="asset-title">Silver (XAG/USD)</h2>
+            <div class="provider-grid">
+                <!-- EODHD -->
+                <div class="provider-card">
+                    <h3 class="provider-name">EODHD</h3>
+                    <div class="price-display" data-provider="eodhd" data-asset="silver">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+
+                <!-- Massive.com -->
+                <div class="provider-card">
+                    <h3 class="provider-name">Massive.com</h3>
+                    <div class="price-display" data-provider="massive" data-asset="silver">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+
+                <!-- Twelve Data -->
+                <div class="provider-card">
+                    <h3 class="provider-name">Twelve Data</h3>
+                    <div class="price-display" data-provider="twelve_data" data-asset="silver">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="statistics">
+                <div class="stat-item">
+                    <span class="stat-label">평균:</span>
+                    <span class="stat-value" id="silver-avg">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최고:</span>
+                    <span class="stat-value" id="silver-max">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최저:</span>
+                    <span class="stat-value" id="silver-min">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">스프레드:</span>
+                    <span class="stat-value" id="silver-spread">--</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- USD/KRW Section -->
+        <section class="asset-section">
+            <h2 class="asset-title">USD/KRW</h2>
+            <div class="provider-grid">
+                <!-- EODHD -->
+                <div class="provider-card">
+                    <h3 class="provider-name">EODHD</h3>
+                    <div class="price-display" data-provider="eodhd" data-asset="usd_krw">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+
+                <!-- Massive.com -->
+                <div class="provider-card">
+                    <h3 class="provider-name">Massive.com</h3>
+                    <div class="price-display" data-provider="massive" data-asset="usd_krw">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+
+                <!-- Twelve Data -->
+                <div class="provider-card">
+                    <h3 class="provider-name">Twelve Data</h3>
+                    <div class="price-display" data-provider="twelve_data" data-asset="usd_krw">
+                        <div class="price-value">--</div>
+                        <div class="price-change">--</div>
+                        <div class="price-details">
+                            <span class="bid">Bid: <strong>--</strong></span>
+                            <span class="ask">Ask: <strong>--</strong></span>
+                        </div>
+                        <div class="timestamp">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="statistics">
+                <div class="stat-item">
+                    <span class="stat-label">평균:</span>
+                    <span class="stat-value" id="usd_krw-avg">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최고:</span>
+                    <span class="stat-value" id="usd_krw-max">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최저:</span>
+                    <span class="stat-value" id="usd_krw-min">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">스프레드:</span>
+                    <span class="stat-value" id="usd_krw-spread">--</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section class="history-section">
+            <h2>과거 기록</h2>
+
+            <!-- Filters -->
+            <div class="filters">
+                <select id="asset-filter" class="filter-select">
+                    <option value="">모든 자산</option>
+                    <option value="gold">Gold</option>
+                    <option value="silver">Silver</option>
+                    <option value="usd_krw">USD/KRW</option>
+                </select>
+
+                <select id="provider-filter" class="filter-select">
+                    <option value="">모든 제공업체</option>
+                    <option value="eodhd">EODHD</option>
+                    <option value="twelve_data">Twelve Data</option>
+                    <option value="massive">Massive.com</option>
+                </select>
+
+                <button id="apply-filter" class="btn-primary">필터 적용</button>
+            </div>
+
+            <!-- History Table -->
+            <div id="history-container" class="history-container">
+                <table id="history-table" class="history-table">
+                    <thead>
+                        <tr>
+                            <th>시간</th>
+                            <th>제공업체</th>
+                            <th>자산</th>
+                            <th>가격</th>
+                            <th>Bid</th>
+                            <th>Ask</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <!-- Dynamically loaded -->
+                    </tbody>
+                </table>
+                <div id="loading" class="loading" style="display:none;">
+                    <div class="spinner"></div>
+                    <span>로딩 중...</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Real-Time Financial Data Comparison | Built with FastAPI & WebSockets</p>
+    </footer>
+
+    <script src="static/js/main.js"></script>
+</body>
+</html>
