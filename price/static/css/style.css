@@ -94,6 +94,11 @@ body {
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
 }
 
+[data-theme="dark"] .header {
+    background: hsl(240 6% 12%);
+    border-bottom-color: hsl(240 4% 20%);
+}
+
 .header-left {
     display: flex;
     align-items: center;
@@ -105,6 +110,10 @@ body {
     font-weight: 600;
     color: var(--primary-foreground);
     letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] .header h1 {
+    color: hsl(0 0% 85%);
 }
 
 .header-right {
@@ -150,6 +159,10 @@ body {
     background: rgb(255 255 255 / 0.15);
 }
 
+[data-theme="dark"] .btn-icon {
+    color: hsl(0 0% 85%);
+}
+
 /* --- Main Container --- */
 .main-container {
     width: 100%;
@@ -180,6 +193,10 @@ body {
 
 .price-card:hover {
     box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+[data-theme="dark"] .price-card:hover {
+    box-shadow: 0 2px 12px rgb(255 255 255 / 0.06);
 }
 
 .price-card-header {
@@ -694,6 +711,12 @@ thead .grid-label-col {
     transform: translateX(0);
 }
 
+[data-theme="dark"] .drawer {
+    background: hsl(240 6% 7%);
+    border-left-color: hsl(240 4% 18%);
+    box-shadow: -4px 0 24px rgb(0 0 0 / 0.5);
+}
+
 .drawer-header {
     display: flex;
     justify-content: space-between;
@@ -715,16 +738,28 @@ thead .grid-label-col {
     margin-right: auto;
     padding: 3px 10px;
     font-size: 11px;
-    color: var(--muted-foreground);
-    background: transparent;
-    border: 1px solid var(--border);
+    color: hsl(0 72% 51%);
+    background: hsl(0 72% 51% / 0.08);
+    border: 1px solid hsl(0 72% 51% / 0.3);
     border-radius: var(--radius);
     cursor: pointer;
     transition: all 0.15s;
 }
 .btn-reset:hover {
-    color: var(--foreground);
-    border-color: var(--foreground);
+    color: hsl(0 0% 100%);
+    background: hsl(0 72% 51%);
+    border-color: hsl(0 72% 51%);
+}
+
+[data-theme="dark"] .btn-reset {
+    color: hsl(0 72% 65%);
+    background: hsl(0 72% 51% / 0.12);
+    border-color: hsl(0 72% 51% / 0.35);
+}
+[data-theme="dark"] .btn-reset:hover {
+    color: hsl(0 0% 100%);
+    background: hsl(0 72% 45%);
+    border-color: hsl(0 72% 45%);
 }
 
 .drawer-close-btn {
@@ -844,4 +879,20 @@ thead .grid-label-col {
 .switch input:checked + .slider::before {
     transform: translateX(18px);
     background: var(--background);
+}
+
+[data-theme="dark"] .slider {
+    background: hsl(240 4% 25%);
+}
+
+[data-theme="dark"] .slider::before {
+    background: hsl(0 0% 75%);
+}
+
+[data-theme="dark"] .switch input:checked + .slider {
+    background: hsl(220 70% 50%);
+}
+
+[data-theme="dark"] .switch input:checked + .slider::before {
+    background: hsl(0 0% 100%);
 }
