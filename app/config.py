@@ -9,13 +9,23 @@ class Settings(BaseSettings):
     EODHD_API_KEY: str
     TWELVE_DATA_API_KEY: str
     MASSIVE_API_KEY: str
+    METALS_DEV_API_KEY: str = ""
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./price_data.db"
 
+    # MSSQL Database (for Massive price data)
+    MSSQL_DRIVER: str = "ODBC Driver 17 for SQL Server"
+    MSSQL_SERVER: str = "(local)\\SQLEXPRESS"
+    MSSQL_DATABASE: str = "goldbef"
+    MSSQL_TRUSTED_CONNECTION: str = "yes"
+
+    # Data Processing
+    PRICE_UPDATE_INTERVAL: float = 3.0  # seconds (3-second averaging)
+
     # Application
-    DEBUG: bool = True
-    LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
+    LOG_LEVEL: str = "WARNING"
     DATA_RETENTION_DAYS: int = 30
 
     # WebSocket Configuration

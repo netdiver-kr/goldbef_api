@@ -1,0 +1,33 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-02-01T19:30:00.000Z",
+  "activeFeatures": ["production-release"],
+  "primaryFeature": "production-release",
+  "features": {
+    "production-release": {
+      "phase": "check",
+      "matchRate": 91,
+      "planDoc": "docs/01-plan/production-release.md",
+      "analysisDoc": "docs/03-analysis/production-release.analysis.md",
+      "lastChecked": "2026-02-01T19:30:00.000Z"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Dynamic",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-01-31T14:06:50.556Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-02-01T19:30:00.000Z"
+  },
+  "history": [
+    {
+      "action": "analyze",
+      "feature": "production-release",
+      "matchRate": 91,
+      "date": "2026-02-01T19:30:00.000Z"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import StaticPool
 from app.config import get_settings
 from app.models.price_data import Base
 from app.utils.logger import app_logger as logger
@@ -17,13 +18,25 @@ class DatabaseConnection:
         """Initialize database connection and create tables"""
         logger.info(f"Initializing database: {self.settings.DATABASE_URL}")
 
+        is_sqlite = "sqlite" in self.settings.DATABASE_URL
+
         # Create async engine
         self.engine = create_async_engine(
             self.settings.DATABASE_URL,
             echo=self.settings.DEBUG,
-            poolclass=NullPool if "sqlite" in self.settings.DATABASE_URL else None,
+            poolclass=StaticPool if is_sqlite else None,
             pool_pre_ping=True
         )
+
+        # Enable WAL mode for SQLite (improves concurrent read/write)
+        if is_sqlite:
+            @event.listens_for(self.engine.sync_engine, "connect")
+            def set_sqlite_pragma(dbapi_conn, connection_record):
+                cursor = dbapi_conn.cursor()
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA synchronous=NORMAL")
+                cursor.execute("PRAGMA busy_timeout=5000")
+                cursor.close()
 
         # Create session maker
         self.session_maker = async_sessionmaker(

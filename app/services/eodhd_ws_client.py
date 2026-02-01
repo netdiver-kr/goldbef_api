@@ -21,9 +21,11 @@ class EODHDWebSocketClient(BaseWebSocketClient):
     """
 
     SYMBOL_MAPPING = {
-        'gold': 'XAUUSD',     # Gold spot price vs USD
-        'silver': 'XAGUSD',   # Silver spot price vs USD
-        'usd_krw': 'USDKRW'   # USD to KRW exchange rate
+        'gold': 'XAUUSD',         # Gold spot price vs USD
+        'silver': 'XAGUSD',       # Silver spot price vs USD
+        'platinum': 'XPTUSD',     # Platinum spot price vs USD
+        'palladium': 'XPDUSD',    # Palladium spot price vs USD
+        'usd_krw': 'USDKRW'       # USD to KRW exchange rate
     }
 
     @property
@@ -97,15 +99,13 @@ class EODHDWebSocketClient(BaseWebSocketClient):
             # EODHD provides 'a' (ask) and 'b' (bid), not direct 'p' (price)
             price = data.get('p') or data.get('price')
             if price is None:
-                # Calculate mid-price from bid and ask
+                # Use ask as price (fallback to bid if ask unavailable)
                 bid = data.get('b') or data.get('bid')
                 ask = data.get('a') or data.get('ask')
-                if bid is not None and ask is not None:
-                    price = (float(bid) + float(ask)) / 2
+                if ask is not None:
+                    price = float(ask)
                 elif bid is not None:
                     price = float(bid)
-                elif ask is not None:
-                    price = float(ask)
                 else:
                     logger.debug(f"[{self.provider_name}] No price data in message: {data}")
                     return None
@@ -125,8 +125,7 @@ class EODHDWebSocketClient(BaseWebSocketClient):
                 'volume': float(data.get('v') or data.get('volume')) if ('v' in data or 'volume' in data) else None,
                 'timestamp': timestamp,
                 'metadata': {
-                    'symbol': symbol,
-                    'raw_data': data
+                    'symbol': symbol
                 }
             }
 

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db_session
 from app.database.repository import PriceRepository
 from app.models.price_data import HistoryResponse, PriceRecordResponse, StatisticsResponse
+from app.services.london_fix_client import get_london_fix_client
+from app.services.smbs_client import get_smbs_client
 from app.utils.logger import app_logger as logger
 
 router = APIRouter()
@@ -95,7 +97,7 @@ async def get_statistics(
     """
     try:
         # Validate asset type
-        valid_assets = ['gold', 'silver', 'usd_krw']
+        valid_assets = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium']
         if asset not in valid_assets:
             raise HTTPException(
                 status_code=400,
@@ -193,3 +195,94 @@ async def get_latest_price(
     except Exception as e:
         logger.error(f"Error fetching latest price: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/london-fix")
+async def get_london_fix():
+    """
+    Get latest London Fix (LBMA) gold and silver prices.
+
+    Returns AM/PM fix prices for gold and silver.
+    Data is fetched from LBMA and cached.
+    """
+    client = get_london_fix_client()
+    return client.cached_data
+
+
+@router.get("/initial-rate")
+async def get_initial_rate():
+    """
+    Get initial exchange rate (최초고시환율) for USD/KRW.
+
+    Data sourced from Seoul Foreign Exchange Brokerage (smbs.biz).
+    """
+    client = get_smbs_client()
+    return client.cached_data
+
+
+def _prev_business_day(d: date) -> date:
+    """Find the previous business day (Mon-Fri) before date d."""
+    d -= timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
+def _most_recent_close_time(now_utc: datetime, close_hour: int, close_minute: int) -> datetime:
+    """Find the most recent market close time (UTC) before now."""
+    today = now_utc.date()
+    close_today = datetime(today.year, today.month, today.day, close_hour, close_minute)
+
+    if now_utc >= close_today and today.weekday() < 5:
+        d = today
+    else:
+        d = _prev_business_day(today if today.weekday() < 5 else today)
+
+    return datetime(d.year, d.month, d.day, close_hour, close_minute)
+
+
+@router.get("/reference-prices")
+async def get_reference_prices(
+    session: AsyncSession = Depends(get_db_session)
+):
+    """
+    Get reference prices for change calculation.
+
+    Returns today's open, previous LSE close (16:30 UTC), and previous NYSE close (22:00 UTC)
+    for each asset.
+    """
+    repository = PriceRepository(session)
+    now_utc = datetime.utcnow()
+    kst_today = (now_utc + timedelta(hours=9)).date()
+
+    # Today's open: first price after 08:00 KST today
+    today_start_utc = datetime(kst_today.year, kst_today.month, kst_today.day, 8, 0) - timedelta(hours=9)
+
+    # LSE close: 16:30 UTC on most recent business day
+    lse_close = _most_recent_close_time(now_utc, 16, 30)
+    lse_search_start = datetime(lse_close.year, lse_close.month, lse_close.day, 0, 0)
+
+    # NYSE close: 22:00 UTC on most recent business day
+    nyse_close = _most_recent_close_time(now_utc, 22, 0)
+    nyse_search_start = datetime(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
+
+    assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw']
+    result = {}
+
+    for asset in assets:
+        # Today's open
+        open_rec = await repository.get_first_price_after(asset, today_start_utc)
+
+        # Previous LSE close
+        lse_rec = await repository.get_last_price_before(asset, lse_close, lse_search_start)
+
+        # Previous NYSE close
+        nyse_rec = await repository.get_last_price_before(asset, nyse_close, nyse_search_start)
+
+        result[asset] = {
+            'today_open': float(open_rec.price) if open_rec else None,
+            'lse_close': float(lse_rec.price) if lse_rec else None,
+            'nyse_close': float(nyse_rec.price) if nyse_rec else None,
+        }
+
+    return result

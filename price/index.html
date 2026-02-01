@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EurasiaMetal - 실시간 귀금속 시세</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="static/css/animations.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1>EurasiaMetal 실시간 시세</h1>
+        </div>
+        <div class="header-right">
+            <span id="connection-status" class="status-badge status-disconnected">연결 중</span>
+            <button id="btn-theme" class="btn-icon" title="테마 전환"><svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+            <button id="btn-settings" class="btn-icon" title="설정"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+        </div>
+    </header>
+
+    <main class="main-container">
+
+        <!-- Section 1: Price Cards -->
+        <section class="price-cards">
+            <!-- Gold -->
+            <div class="price-card" data-asset="gold">
+                <div class="price-card-header">
+                    <span class="asset-name">Gold <span class="asset-symbol">XAU/USD</span></span>
+
+                </div>
+                <div class="price-main">
+                    <span class="price-value" data-asset="gold">--</span>
+                    <span class="price-change">--</span>
+                </div>
+                <div class="price-bidask">
+                    <span>Bid: <strong class="bid-value">--</strong></span>
+                    <span>Ask: <strong class="ask-value">--</strong></span>
+                </div>
+            </div>
+
+            <!-- Silver -->
+            <div class="price-card" data-asset="silver">
+                <div class="price-card-header">
+                    <span class="asset-name">Silver <span class="asset-symbol">XAG/USD</span></span>
+
+                </div>
+                <div class="price-main">
+                    <span class="price-value" data-asset="silver">--</span>
+                    <span class="price-change">--</span>
+                </div>
+                <div class="price-bidask">
+                    <span>Bid: <strong class="bid-value">--</strong></span>
+                    <span>Ask: <strong class="ask-value">--</strong></span>
+                </div>
+            </div>
+
+            <!-- Platinum -->
+            <div class="price-card" data-asset="platinum">
+                <div class="price-card-header">
+                    <span class="asset-name">Platinum <span class="asset-symbol">XPT/USD</span></span>
+
+                </div>
+                <div class="price-main">
+                    <span class="price-value" data-asset="platinum">--</span>
+                    <span class="price-change">--</span>
+                </div>
+                <div class="price-bidask">
+                    <span>Bid: <strong class="bid-value">--</strong></span>
+                    <span>Ask: <strong class="ask-value">--</strong></span>
+                </div>
+            </div>
+
+            <!-- Palladium -->
+            <div class="price-card" data-asset="palladium">
+                <div class="price-card-header">
+                    <span class="asset-name">Palladium <span class="asset-symbol">XPD/USD</span></span>
+
+                </div>
+                <div class="price-main">
+                    <span class="price-value" data-asset="palladium">--</span>
+                    <span class="price-change">--</span>
+                </div>
+                <div class="price-bidask">
+                    <span>Bid: <strong class="bid-value">--</strong></span>
+                    <span>Ask: <strong class="ask-value">--</strong></span>
+                </div>
+            </div>
+
+            <!-- USD/KRW -->
+            <div class="price-card" data-asset="usd_krw">
+                <div class="price-card-header">
+                    <span class="asset-name">USD/KRW <span class="asset-symbol">환율</span></span>
+
+                </div>
+                <div class="price-main">
+                    <span class="price-value" data-asset="usd_krw">--</span>
+                    <span class="price-change">--</span>
+                </div>
+                <div class="price-bidask">
+                    <span>Bid: <strong class="bid-value">--</strong></span>
+                    <span>Ask: <strong class="ask-value">--</strong></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: KRW Conversion Grids -->
+        <div id="grid-container"></div>
+
+        <!-- Section 3: Bottom Info -->
+        <section class="bottom-info">
+            <!-- Initial Exchange Rate -->
+            <div class="info-card">
+                <div class="info-card-title">최초고시환율 (USD/KRW)</div>
+                <div class="info-row">
+                    <span class="info-label">고시환율</span>
+                    <span class="info-value placeholder" id="initial-rate-value">API 연동 대기</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">기준일</span>
+                    <span class="info-value placeholder" id="initial-rate-date">--</span>
+                </div>
+            </div>
+
+            <!-- London Fix -->
+            <div class="info-card">
+                <div class="info-card-title">London Fix (LBMA)</div>
+                <table class="london-fix-table">
+                    <thead>
+                        <tr><th></th><th>AM</th><th>PM</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="lf-label">Gold</td><td class="lf-value placeholder" id="london-gold-am">--</td><td class="lf-value placeholder" id="london-gold-pm">--</td></tr>
+                        <tr><td class="lf-label">Silver</td><td class="lf-value placeholder" id="london-silver" colspan="2">--</td></tr>
+                        <tr><td class="lf-label">Platinum</td><td class="lf-value placeholder" id="london-platinum-am">--</td><td class="lf-value placeholder" id="london-platinum-pm">--</td></tr>
+                        <tr><td class="lf-label">Palladium</td><td class="lf-value placeholder" id="london-palladium-am">--</td><td class="lf-value placeholder" id="london-palladium-pm">--</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        &copy; 2025 EurasiaMetal | Real-Time Precious Metal Prices
+    </footer>
+
+    <!-- Settings Drawer -->
+    <div id="settings-backdrop" class="drawer-backdrop"></div>
+    <aside id="settings-drawer" class="drawer">
+        <div class="drawer-header">
+            <span class="drawer-title">설정</span>
+            <button id="btn-reset-settings" class="btn-reset" title="초기화">초기화</button>
+            <button id="drawer-close" class="btn-icon drawer-close-btn" title="닫기">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="drawer-body">
+            <!-- Theme -->
+            <div class="settings-card">
+                <div class="settings-card-title">테마</div>
+                <div class="theme-toggle">
+                    <span class="theme-toggle-label" id="theme-label">다크 모드</span>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Provider -->
+            <div class="settings-card">
+                <div class="settings-card-title">데이터 프로바이더</div>
+                <div class="settings-option">
+                    <input type="radio" name="provider" id="prov-eodhd" value="eodhd">
+                    <label for="prov-eodhd">EODHD<div class="desc">WebSocket 실시간 스트림</div></label>
+                </div>
+                <div class="settings-option">
+                    <input type="radio" name="provider" id="prov-massive" value="massive">
+                    <label for="prov-massive">Massive.com<div class="desc">HTTP 실시간 폴링 (3초)</div></label>
+                </div>
+                <div class="settings-option">
+                    <input type="radio" name="provider" id="prov-twelve" value="twelve_data">
+                    <label for="prov-twelve">Twelve Data<div class="desc">HTTP 폴링 (30초)</div></label>
+                </div>
+            </div>
+
+            <!-- Change Reference -->
+            <div class="settings-card">
+                <div class="settings-card-title">변동 기준가</div>
+                <div class="settings-option">
+                    <input type="radio" name="changeref" id="ref-open" value="today_open">
+                    <label for="ref-open">당일 시작가<div class="desc">오늘 첫 수신 가격 기준 (KST 08:00)</div></label>
+                </div>
+                <div class="settings-option">
+                    <input type="radio" name="changeref" id="ref-nyse" value="nyse_close">
+                    <label for="ref-nyse">전일 NYSE 마감가<div class="desc">뉴욕 17:00 ET (22:00 UTC) 마감 기준</div></label>
+                </div>
+                <div class="settings-option">
+                    <input type="radio" name="changeref" id="ref-lse" value="lse_close">
+                    <label for="ref-lse">전일 LSE 마감가<div class="desc">런던 16:30 GMT 마감 기준</div></label>
+                </div>
+            </div>
+
+            <!-- Update Interval -->
+            <div class="settings-card">
+                <div class="settings-card-title">업데이트 간격</div>
+                <div class="settings-option">
+                    <input type="radio" name="interval" id="int-3" value="3000">
+                    <label for="int-3">3초<div class="desc">가장 빠른 업데이트 (권장)</div></label>
+                </div>
+                <div class="settings-option">
+                    <input type="radio" name="interval" id="int-6" value="6000">
+                    <label for="int-6">6초<div class="desc">보통 업데이트 속도</div></label>
+                </div>
+                <div class="settings-option">
+                    <input type="radio" name="interval" id="int-10" value="10000">
+                    <label for="int-10">10초<div class="desc">저부하 모드</div></label>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <script src="static/js/settings.js"></script>
+    <script src="static/js/rolling.js"></script>
+    <script src="static/js/grid.js"></script>
+    <script src="static/js/app.js"></script>
+</body>
+</html>

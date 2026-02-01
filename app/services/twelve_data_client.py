@@ -21,6 +21,8 @@ class TwelveDataClient:
     SYMBOL_MAPPING = {
         'gold': 'XAU/USD',
         'silver': 'XAG/USD',
+        'platinum': 'XPT/USD',
+        'palladium': 'XPD/USD',
         'usd_krw': 'USD/KRW'
     }
 

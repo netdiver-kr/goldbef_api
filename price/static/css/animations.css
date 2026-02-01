@@ -1,0 +1,96 @@
+/* ============================================
+   Animations: Rolling Numbers, Flash, Burn-in
+   ============================================ */
+
+/* --- Toss-style Rolling Number Animation --- */
+.rolling-number {
+    display: inline-flex;
+    align-items: baseline;
+    overflow: hidden;
+    line-height: 1;
+}
+
+.digit-slot {
+    display: inline-block;
+    height: 1em;
+    overflow: hidden;
+    position: relative;
+}
+
+.digit-column {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+}
+
+.digit-column span {
+    display: block;
+    height: 1em;
+    line-height: 1;
+    text-align: center;
+}
+
+.digit-separator {
+    display: inline-block;
+    height: 1em;
+    line-height: 1;
+}
+
+/* --- Price Flash Animation (fade in → fade out) --- */
+@keyframes flash-up {
+    0% {
+        box-shadow: none;
+        background: var(--card);
+    }
+    30% {
+        box-shadow: inset 0 0 0 2px var(--up-color);
+        background: var(--up-bg);
+    }
+    60% {
+        box-shadow: inset 0 0 0 1px hsl(142.1 76.2% 50% / 0.15);
+    }
+    100% {
+        box-shadow: none;
+        background: var(--card);
+    }
+}
+
+@keyframes flash-down {
+    0% {
+        box-shadow: none;
+        background: var(--card);
+    }
+    30% {
+        box-shadow: inset 0 0 0 2px var(--down-color);
+        background: var(--down-bg);
+    }
+    60% {
+        box-shadow: inset 0 0 0 1px hsl(0 84.2% 60% / 0.15);
+    }
+    100% {
+        box-shadow: none;
+        background: var(--card);
+    }
+}
+
+.price-card.flash-up {
+    animation: flash-up 1.5s ease-in-out;
+}
+
+.price-card.flash-down {
+    animation: flash-down 1.5s ease-in-out;
+}
+
+/* --- Burn-in Prevention: Subtle Pixel Shift --- */
+@keyframes pixel-shift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(1px, 0.5px); }
+    50%  { transform: translate(-0.5px, 1px); }
+    75%  { transform: translate(0.5px, -1px); }
+    100% { transform: translate(0, 0); }
+}
+
+.burn-in-shift {
+    transition: transform 2s ease-in-out;
+}

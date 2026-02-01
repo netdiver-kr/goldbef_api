@@ -34,17 +34,22 @@ class WebSocketManager:
             callback=self._handle_message
         )
 
-        self.naugold_client = NaugoldClient(
-            callback=self._handle_message
+        # NauGold HTTP polling client (replaces Massive MSSQL)
+        self.massive_client = NaugoldClient(
+            on_message=self._handle_massive_message
         )
 
         # SSE broadcast queues
         self.broadcast_queues: List[asyncio.Queue] = []
 
-        # EODHD data buffer for averaging (5 second intervals)
+        # EODHD data buffer for averaging (3 second intervals)
         self.eodhd_buffer: Dict[str, List[Dict[str, Any]]] = {}
-        self.eodhd_flush_interval = 5.0  # seconds
+        self.eodhd_flush_interval = settings.PRICE_UPDATE_INTERVAL  # 3 seconds
         self.eodhd_flush_task = None
+
+        # Massive data buffer for averaging (3 second intervals)
+        self.massive_buffer: Dict[str, List[Dict[str, Any]]] = {}
+        self.massive_flush_task = None
 
     async def _handle_eodhd_message(self, data: Dict[str, Any]):
         """
@@ -64,14 +69,33 @@ class WebSocketManager:
         except Exception as e:
             logger.error(f"Error buffering EODHD message: {e}")
 
+    async def _handle_massive_message(self, data: Dict[str, Any]):
+        """
+        Handle Massive MSSQL message - buffer for averaging
+        """
+        try:
+            asset_type = data.get('asset_type')
+            if not asset_type:
+                return
+
+            # Add to buffer
+            if asset_type not in self.massive_buffer:
+                self.massive_buffer[asset_type] = []
+
+            self.massive_buffer[asset_type].append(data)
+
+        except Exception as e:
+            logger.error(f"Error buffering Massive message: {e}")
+
     async def _flush_eodhd_buffer(self):
         """
-        Periodically flush EODHD buffer with averaged values
+        Periodically flush EODHD buffer with averaged values (batch save)
         """
         while True:
             try:
                 await asyncio.sleep(self.eodhd_flush_interval)
 
+                batch = []
                 for asset_type, data_list in list(self.eodhd_buffer.items()):
                     if not data_list:
                         continue
@@ -92,11 +116,9 @@ class WebSocketManager:
                         'ask': sum(asks) / len(asks) if asks else None,
                         'volume': data_list[-1].get('volume'),
                         'timestamp': data_list[-1].get('timestamp'),
-                        'metadata': data_list[-1].get('metadata')
                     }
 
-                    # Save to database and broadcast
-                    await self.data_processor.save_price(avg_data)
+                    batch.append(avg_data)
                     await self._broadcast_to_sse_clients(avg_data)
 
                     logger.debug(f"[eodhd] Flushed {len(data_list)} samples for {asset_type}, avg price: {avg_data['price']:.4f}")
@@ -104,10 +126,62 @@ class WebSocketManager:
                     # Clear buffer for this asset
                     self.eodhd_buffer[asset_type] = []
 
+                # Batch save all averaged data in single transaction
+                if batch:
+                    await self.data_processor.save_prices_batch(batch)
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Error flushing EODHD buffer: {e}")
+
+    async def _flush_massive_buffer(self):
+        """
+        Periodically flush Massive buffer with averaged values (batch save)
+        """
+        while True:
+            try:
+                await asyncio.sleep(self.eodhd_flush_interval)  # Same interval as EODHD
+
+                batch = []
+                for asset_type, data_list in list(self.massive_buffer.items()):
+                    if not data_list:
+                        continue
+
+                    # Calculate averages
+                    prices = [d['price'] for d in data_list if d.get('price')]
+                    bids = [d['bid'] for d in data_list if d.get('bid')]
+                    asks = [d['ask'] for d in data_list if d.get('ask')]
+
+                    if not prices:
+                        continue
+
+                    avg_data = {
+                        'provider': 'massive',
+                        'asset_type': asset_type,
+                        'price': sum(prices) / len(prices),
+                        'bid': sum(bids) / len(bids) if bids else None,
+                        'ask': sum(asks) / len(asks) if asks else None,
+                        'volume': data_list[-1].get('volume'),
+                        'timestamp': data_list[-1].get('timestamp'),
+                    }
+
+                    batch.append(avg_data)
+                    await self._broadcast_to_sse_clients(avg_data)
+
+                    logger.debug(f"[massive] Flushed {len(data_list)} samples for {asset_type}, avg price: {avg_data['price']:.4f}")
+
+                    # Clear buffer for this asset
+                    self.massive_buffer[asset_type] = []
+
+                # Batch save all averaged data in single transaction
+                if batch:
+                    await self.data_processor.save_prices_batch(batch)
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error flushing Massive buffer: {e}")
 
     async def _handle_message(self, data: Dict[str, Any]):
         """
@@ -175,15 +249,19 @@ class WebSocketManager:
         self.eodhd_flush_task = asyncio.create_task(self._flush_eodhd_buffer())
         logger.info(f"EODHD buffer flush started (interval: {self.eodhd_flush_interval}s)")
 
+        # Start Massive buffer flush task
+        self.massive_flush_task = asyncio.create_task(self._flush_massive_buffer())
+        logger.info(f"Massive buffer flush started (interval: {self.eodhd_flush_interval}s)")
+
         # Create tasks for WebSocket clients
         ws_tasks = [client.start() for client in self.ws_clients]
 
         # Add HTTP polling client tasks
         twelve_data_task = self.twelve_data_client.start()
-        naugold_task = self.naugold_client.start()
+        massive_task = self.massive_client.start()
 
         # Run all clients concurrently
-        await asyncio.gather(*ws_tasks, twelve_data_task, naugold_task, return_exceptions=True)
+        await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, return_exceptions=True)
 
     async def stop(self):
         """Stop all data clients"""
@@ -197,14 +275,22 @@ class WebSocketManager:
             except asyncio.CancelledError:
                 pass
 
+        # Stop Massive buffer flush task
+        if self.massive_flush_task:
+            self.massive_flush_task.cancel()
+            try:
+                await self.massive_flush_task
+            except asyncio.CancelledError:
+                pass
+
         # Stop WebSocket clients
         ws_tasks = [client.stop() for client in self.ws_clients]
 
         # Stop HTTP polling clients
         twelve_data_task = self.twelve_data_client.stop()
-        naugold_task = self.naugold_client.stop()
+        massive_task = self.massive_client.stop()
 
-        await asyncio.gather(*ws_tasks, twelve_data_task, naugold_task, return_exceptions=True)
+        await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, return_exceptions=True)
 
     def add_sse_client(self, queue: asyncio.Queue):
         """Register a new SSE client"""
@@ -225,7 +311,7 @@ class WebSocketManager:
         }
         # HTTP polling clients
         status['twelve_data'] = self.twelve_data_client.is_connected()
-        status['massive'] = self.naugold_client.running
+        status['massive'] = self.massive_client.running
         return status
 
 

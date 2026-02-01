@@ -14,6 +14,10 @@ async def event_generator(request: Request):
     ws_manager = get_ws_manager()
     settings = get_settings()
 
+    # Send immediate heartbeat to force IIS ARR to flush response headers
+    # This makes the browser's EventSource.onopen fire without delay
+    yield ": connected\n\n"
+
     # Create queue for this client
     queue = asyncio.Queue(maxsize=settings.SSE_QUEUE_SIZE)
     ws_manager.add_sse_client(queue)

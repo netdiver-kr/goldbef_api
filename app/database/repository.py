@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, List
 import json
-from sqlalchemy import select, func, desc, and_
+from sqlalchemy import select, delete, func, desc, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.price_data import PriceRecord, PriceData
 from app.utils.logger import app_logger as logger
@@ -23,7 +23,7 @@ class PriceRepository:
         volume: Optional[float] = None,
         timestamp: Optional[datetime] = None,
         metadata: Optional[dict] = None
-    ) -> PriceRecord:
+    ) -> None:
         """Insert a new price record"""
         record = PriceRecord(
             timestamp=timestamp or datetime.utcnow(),
@@ -38,10 +38,35 @@ class PriceRepository:
 
         self.session.add(record)
         await self.session.commit()
-        await self.session.refresh(record)
 
         logger.debug(f"Inserted price record: {provider} - {asset_type} = {price}")
-        return record
+
+    async def insert_price_records_batch(
+        self,
+        records_data: List[dict]
+    ) -> None:
+        """Insert multiple price records in a single transaction"""
+        if not records_data:
+            return
+
+        records = [
+            PriceRecord(
+                timestamp=data.get('timestamp') or datetime.utcnow(),
+                provider=data['provider'],
+                asset_type=data['asset_type'],
+                price=data['price'],
+                bid=data.get('bid'),
+                ask=data.get('ask'),
+                volume=data.get('volume'),
+                extra_data=json.dumps(data.get('metadata')) if data.get('metadata') else None
+            )
+            for data in records_data
+        ]
+
+        self.session.add_all(records)
+        await self.session.commit()
+
+        logger.debug(f"Batch inserted {len(records)} price records")
 
     async def get_price_records(
         self,
@@ -131,19 +156,55 @@ class PriceRepository:
 
         return stats
 
+    async def get_first_price_after(
+        self,
+        asset_type: str,
+        after_utc: datetime
+    ) -> Optional[PriceRecord]:
+        """Get the first price record after a given UTC time for any provider"""
+        query = select(PriceRecord).where(
+            and_(
+                PriceRecord.asset_type == asset_type,
+                PriceRecord.timestamp >= after_utc
+            )
+        ).order_by(PriceRecord.timestamp).limit(1)
+
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_last_price_before(
+        self,
+        asset_type: str,
+        before_utc: datetime,
+        after_utc: datetime
+    ) -> Optional[PriceRecord]:
+        """Get the last price record in a time window for any provider"""
+        query = select(PriceRecord).where(
+            and_(
+                PriceRecord.asset_type == asset_type,
+                PriceRecord.timestamp <= before_utc,
+                PriceRecord.timestamp >= after_utc
+            )
+        ).order_by(desc(PriceRecord.timestamp)).limit(1)
+
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def delete_old_records(self, days: int = 30) -> int:
-        """Delete records older than specified days"""
+        """Delete records older than specified days using bulk DELETE"""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
 
-        query = select(PriceRecord).where(PriceRecord.timestamp < cutoff_date)
-        result = await self.session.execute(query)
-        records = result.scalars().all()
+        # Count before delete
+        count_query = select(func.count(PriceRecord.id)).where(
+            PriceRecord.timestamp < cutoff_date
+        )
+        result = await self.session.execute(count_query)
+        count = result.scalar() or 0
 
-        count = len(records)
-        for record in records:
-            await self.session.delete(record)
-
-        await self.session.commit()
+        if count > 0:
+            stmt = delete(PriceRecord).where(PriceRecord.timestamp < cutoff_date)
+            await self.session.execute(stmt)
+            await self.session.commit()
 
         logger.info(f"Deleted {count} old records (older than {days} days)")
         return count
