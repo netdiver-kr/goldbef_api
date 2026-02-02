@@ -27,7 +27,8 @@ class PriceApp {
         this.refPrices = {};     // { assetKey: price } - reference for change display
         this.allRefPrices = {};  // { assetKey: { today_open, lse_close, nyse_close } }
         this.eventSource = null;
-        this.lastUpdate = {};    // { assetKey: timestamp }
+        this.lastGlobalUpdate = 0;      // global throttle timestamp
+        this._throttleBatchOpen = false; // batch window flag
         this.fallbackLock = {};  // { assetKey: providerName } - lock fallback to first provider
         this.burnInTimer = null;
 
@@ -47,6 +48,13 @@ class PriceApp {
             if (el) {
                 this.rollers[key] = new RollingNumber(el, { decimals: meta.decimals });
             }
+        });
+
+        // Clean up flash classes after animation ends (ensures reliable restart)
+        document.querySelectorAll('.price-card').forEach(card => {
+            card.addEventListener('animationend', () => {
+                card.classList.remove('flash-up', 'flash-down');
+            });
         });
 
         // Settings event listeners
@@ -145,12 +153,15 @@ class PriceApp {
             if (provider !== this.fallbackLock[asset]) return;
         }
 
-        // Throttle by update interval
+        // Global throttle - all assets update together
         const interval = this.settings.getInterval();
         const now = Date.now();
-        const lastTs = this.lastUpdate[asset] || 0;
-        if (now - lastTs < interval) return;
-        this.lastUpdate[asset] = now;
+        if (!this._throttleBatchOpen) {
+            if (now - this.lastGlobalUpdate < interval) return;
+            this._throttleBatchOpen = true;
+            this.lastGlobalUpdate = now;
+            setTimeout(() => { this._throttleBatchOpen = false; }, 500);
+        }
 
         // Update price card
         this._updatePriceCard(asset, data);
@@ -178,14 +189,14 @@ class PriceApp {
 
         // Flash animation based on tick-to-tick change
         const prevPrice = this.prevPrices[asset];
-        if (prevPrice) {
-            const tickChange = data.price - prevPrice;
-            const cls = tickChange >= 0 ? 'flash-up' : 'flash-down';
-            // Use animationend to clean up instead of forced reflow
+        if (prevPrice && data.price !== prevPrice) {
+            const cls = data.price > prevPrice ? 'flash-up' : 'flash-down';
             card.classList.remove('flash-up', 'flash-down');
-            // Schedule class add in next frame to restart animation without forced reflow
+            // Double rAF ensures browser processes the removal before re-adding
             requestAnimationFrame(() => {
-                card.classList.add(cls);
+                requestAnimationFrame(() => {
+                    card.classList.add(cls);
+                });
             });
         }
         this.prevPrices[asset] = data.price;
