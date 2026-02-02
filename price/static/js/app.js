@@ -14,7 +14,7 @@ class PriceApp {
     // Which assets each provider actually sends data for
     // Assets NOT listed here will fall back to accepting from any provider
     static PROVIDER_ASSETS = {
-        eodhd:      ['gold', 'silver', 'palladium', 'usd_krw'],
+        eodhd:      ['gold', 'silver', 'platinum', 'palladium', 'usd_krw'],
         twelve_data: ['gold', 'silver', 'platinum', 'palladium', 'usd_krw'],
         massive:    ['gold', 'silver', 'platinum', 'palladium', 'usd_krw', 'jpy_krw', 'cny_krw', 'eur_krw', 'hkd_krw'],
     };
