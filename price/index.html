@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EurasiaMetal - 실시간 귀금속 시세</title>
-    <link rel="stylesheet" href="static/css/style.css">
-    <link rel="stylesheet" href="static/css/animations.css">
+    <link rel="stylesheet" href="static/css/style.css?v=20260203f">
+    <link rel="stylesheet" href="static/css/animations.css?v=20260203f">
 </head>
 <body>
     <!-- Header -->
@@ -125,7 +125,7 @@
 
             <!-- London Fix -->
             <div class="info-card">
-                <div class="info-card-title">London Fix (LBMA)</div>
+                <div class="info-card-title">London Fix (LBMA) <span class="info-card-date placeholder" id="london-fix-date">--</span></div>
                 <table class="london-fix-table">
                     <thead>
                         <tr><th></th><th>AM</th><th>PM</th></tr>
@@ -137,6 +137,65 @@
                         <tr><td class="lf-label">Palladium</td><td class="lf-value placeholder" id="london-palladium-am">--</td><td class="lf-value placeholder" id="london-palladium-pm">--</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Market Hours -->
+            <div class="info-card">
+                <div class="info-card-title">시장 상태</div>
+                <div id="market-hours">
+                    <div class="market-row">
+                        <span class="market-dot" id="dot-london"></span>
+                        <span class="market-name">London <span class="exchange-tag">LSE</span></span>
+                        <span class="market-time" id="time-london">--</span>
+                    </div>
+                    <div class="market-row">
+                        <span class="market-dot" id="dot-newyork"></span>
+                        <span class="market-name">New York <span class="exchange-tag">NYSE</span></span>
+                        <span class="market-time" id="time-newyork">--</span>
+                    </div>
+                    <div class="market-row">
+                        <span class="market-dot" id="dot-seoul"></span>
+                        <span class="market-name">Seoul <span class="exchange-tag">KRX</span></span>
+                        <span class="market-time" id="time-seoul">--</span>
+                    </div>
+                    <div class="market-row">
+                        <span class="market-dot" id="dot-shanghai"></span>
+                        <span class="market-name">Shanghai <span class="exchange-tag">SSE</span></span>
+                        <span class="market-time" id="time-shanghai">--</span>
+                    </div>
+                    <div class="market-row">
+                        <span class="market-dot" id="dot-sydney"></span>
+                        <span class="market-name">Sydney <span class="exchange-tag">ASX</span></span>
+                        <span class="market-time" id="time-sydney">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reference Prices -->
+            <div class="info-card">
+                <div class="info-card-title">변동 기준가 <span class="info-card-date" id="ref-type-label">--</span></div>
+                <div id="ref-prices">
+                    <div class="info-row">
+                        <span class="info-label">Gold</span>
+                        <span class="info-value placeholder" id="ref-gold">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Silver</span>
+                        <span class="info-value placeholder" id="ref-silver">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Platinum</span>
+                        <span class="info-value placeholder" id="ref-platinum">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Palladium</span>
+                        <span class="info-value placeholder" id="ref-palladium">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">USD/KRW</span>
+                        <span class="info-value placeholder" id="ref-usd_krw">--</span>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -222,9 +281,9 @@
         </div>
     </aside>
 
-    <script src="static/js/settings.js?v=20260202d"></script>
-    <script src="static/js/rolling.js?v=20260202d"></script>
-    <script src="static/js/grid.js?v=20260202d"></script>
-    <script src="static/js/app.js?v=20260202d"></script>
+    <script src="static/js/settings.js?v=20260203f"></script>
+    <script src="static/js/rolling.js?v=20260203f"></script>
+    <script src="static/js/grid.js?v=20260203f"></script>
+    <script src="static/js/app.js?v=20260203f"></script>
 </body>
 </html>

@@ -62,7 +62,10 @@ class PriceApp {
         this.settings.on('interval', () => {
             // Interval change - throttle is handled in handleUpdate
         });
-        this.settings.on('changeRef', () => this._applyReferencePrices());
+        this.settings.on('changeRef', () => {
+            this._applyReferencePrices();
+            this._updateRefPricePanel();
+        });
 
         // Theme toggle button
         const themeBtn = document.getElementById('btn-theme');
@@ -84,18 +87,25 @@ class PriceApp {
         // Settings drawer
         this._initSettingsDrawer();
 
-        // Load initial data, reference prices, then connect SSE
-        Promise.all([
-            this._loadInitialPrices(),
-            this._loadReferencePrices()
-        ]).then(() => this._connectSSE());
+        // Connect SSE immediately, load initial data in parallel
+        this._connectSSE();
+        this._loadInitialPrices();
+        this._loadReferencePrices();
 
         // Burn-in prevention: subtle pixel shift every 10 minutes
         this._startBurnInPrevention();
 
-        // London Fix & Initial Rate
+        // London Fix & Initial Rate (refresh every 30 min for long-running pages)
         this._loadLondonFix();
         this._loadInitialRate();
+        this._dailyRefreshTimer = setInterval(() => {
+            this._loadLondonFix();
+            this._loadInitialRate();
+        }, 1800000);
+
+        // Market hours (update every minute)
+        this._updateMarketHours();
+        this._marketHoursTimer = setInterval(() => this._updateMarketHours(), 60000);
     }
 
     // --- SSE Connection ---
@@ -302,6 +312,7 @@ class PriceApp {
             const data = await response.json();
             this.allRefPrices = data;
             this._applyReferencePrices();
+            this._updateRefPricePanel();
         } catch (e) {
             // Reference prices API not available yet
         }
@@ -336,6 +347,7 @@ class PriceApp {
             if (data.platinum_pm != null) this._setText('london-platinum-pm', this._fmt(data.platinum_pm, 2));
             if (data.palladium_am != null) this._setText('london-palladium-am', this._fmt(data.palladium_am, 2));
             if (data.palladium_pm != null) this._setText('london-palladium-pm', this._fmt(data.palladium_pm, 2));
+            if (data.date) this._setText('london-fix-date', data.date);
         } catch (e) {
             // London Fix not available yet
         }
@@ -359,6 +371,70 @@ class PriceApp {
         } catch (e) {
             // Initial rate API not available yet
         }
+    }
+
+    // --- Market Hours ---
+    static MARKETS = [
+        { id: 'london',   name: 'London (LSE)',    tz: 'Europe/London',    openH: 8, closeH: 16, closeM: 30 },
+        { id: 'newyork',  name: 'New York (NYSE)', tz: 'America/New_York', openH: 9, openM: 30, closeH: 16 },
+        { id: 'seoul',    name: 'Seoul (KRX)',     tz: 'Asia/Seoul',       openH: 9, closeH: 15, closeM: 30 },
+        { id: 'shanghai', name: 'Shanghai (SSE)',   tz: 'Asia/Shanghai',   openH: 9, openM: 30, closeH: 15 },
+        { id: 'sydney',   name: 'Sydney (ASX)',    tz: 'Australia/Sydney', openH: 10, closeH: 16 },
+    ];
+
+    _updateMarketHours() {
+        const now = new Date();
+        PriceApp.MARKETS.forEach(m => {
+            const local = new Date(now.toLocaleString('en-US', { timeZone: m.tz }));
+            const h = local.getHours();
+            const min = local.getMinutes();
+            const current = h * 60 + min;
+            const open = m.openH * 60 + (m.openM || 0);
+            const close = m.closeH * 60 + (m.closeM || 0);
+            const day = local.getDay(); // 0=Sun, 6=Sat
+            const isWeekday = day >= 1 && day <= 5;
+            const isOpen = isWeekday && current >= open && current < close;
+
+            const dot = document.getElementById(`dot-${m.id}`);
+            if (dot) {
+                dot.classList.toggle('open', isOpen);
+            }
+
+            const timeEl = document.getElementById(`time-${m.id}`);
+            if (timeEl) {
+                const hh = String(local.getHours()).padStart(2, '0');
+                const mm = String(local.getMinutes()).padStart(2, '0');
+                timeEl.textContent = `${hh}:${mm}`;
+            }
+        });
+    }
+
+    // --- Reference Price Display ---
+    _updateRefPricePanel() {
+        const refType = this.settings.getChangeRef();
+        const labels = {
+            today_open: '당일 시작가',
+            nyse_close: 'NYSE 마감',
+            lse_close: 'LSE 마감'
+        };
+        const labelEl = document.getElementById('ref-type-label');
+        if (labelEl) labelEl.textContent = labels[refType] || refType;
+
+        const assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw'];
+        const decimalsMap = { gold: 2, silver: 4, platinum: 2, palladium: 2, usd_krw: 2 };
+
+        assets.forEach(asset => {
+            const el = document.getElementById(`ref-${asset}`);
+            if (!el) return;
+            const refs = this.allRefPrices[asset];
+            const val = refs ? refs[refType] : null;
+            if (val != null) {
+                el.textContent = this._fmt(val, decimalsMap[asset]);
+                el.classList.remove('placeholder');
+            } else {
+                el.textContent = '--';
+            }
+        });
     }
 
     // --- Burn-in Prevention ---
@@ -510,6 +586,8 @@ class PriceApp {
     destroy() {
         if (this.eventSource) this.eventSource.close();
         if (this.burnInTimer) clearInterval(this.burnInTimer);
+        if (this._dailyRefreshTimer) clearInterval(this._dailyRefreshTimer);
+        if (this._marketHoursTimer) clearInterval(this._marketHoursTimer);
     }
 }
 

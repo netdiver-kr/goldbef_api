@@ -118,6 +118,9 @@ async def get_statistics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_latest_all_cache = {'data': None, 'expires': 0}
+
+
 @router.get("/latest-all")
 async def get_all_latest_prices(
     session: AsyncSession = Depends(get_db_session)
@@ -125,8 +128,15 @@ async def get_all_latest_prices(
     """
     Get the latest prices for all providers and assets
 
-    Returns a list of the most recent price for each provider-asset combination
+    Returns a list of the most recent price for each provider-asset combination.
+    Cached for 2 seconds to avoid redundant DB hits on page load.
     """
+    import time
+    now_ts = time.time()
+
+    if _latest_all_cache['data'] and now_ts < _latest_all_cache['expires']:
+        return _latest_all_cache['data']
+
     try:
         repository = PriceRepository(session)
 
@@ -148,7 +158,11 @@ async def get_all_latest_prices(
                         "timestamp": record.timestamp.isoformat()
                     })
 
-        return {"prices": results}
+        response = {"prices": results}
+        _latest_all_cache['data'] = response
+        _latest_all_cache['expires'] = now_ts + 2
+
+        return response
 
     except Exception as e:
         logger.error(f"Error fetching all latest prices: {e}")
@@ -209,6 +223,7 @@ async def get_london_fix():
     return client.cached_data
 
 
+
 @router.get("/initial-rate")
 async def get_initial_rate():
     """
@@ -241,6 +256,9 @@ def _most_recent_close_time(now_utc: datetime, close_hour: int, close_minute: in
     return datetime(d.year, d.month, d.day, close_hour, close_minute)
 
 
+_ref_price_cache = {'data': None, 'expires': 0}
+
+
 @router.get("/reference-prices")
 async def get_reference_prices(
     session: AsyncSession = Depends(get_db_session)
@@ -249,40 +267,39 @@ async def get_reference_prices(
     Get reference prices for change calculation.
 
     Returns today's open, previous LSE close (16:30 UTC), and previous NYSE close (22:00 UTC)
-    for each asset.
+    for each asset. Uses bulk queries (3 instead of 15) and 60-second cache.
     """
+    import time
+    now_ts = time.time()
+
+    # Return cached data if fresh (60 seconds)
+    if _ref_price_cache['data'] and now_ts < _ref_price_cache['expires']:
+        return _ref_price_cache['data']
+
     repository = PriceRepository(session)
     now_utc = datetime.utcnow()
     kst_today = (now_utc + timedelta(hours=9)).date()
 
-    # Today's open: first price after 08:00 KST today
     today_start_utc = datetime(kst_today.year, kst_today.month, kst_today.day, 8, 0) - timedelta(hours=9)
 
-    # LSE close: 16:30 UTC on most recent business day
     lse_close = _most_recent_close_time(now_utc, 16, 30)
     lse_search_start = datetime(lse_close.year, lse_close.month, lse_close.day, 0, 0)
 
-    # NYSE close: 22:00 UTC on most recent business day
     nyse_close = _most_recent_close_time(now_utc, 22, 0)
     nyse_search_start = datetime(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
 
     assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw']
-    result = {}
 
-    for asset in assets:
-        # Today's open
-        open_rec = await repository.get_first_price_after(asset, today_start_utc)
+    result = await repository.get_reference_prices_bulk(
+        assets=assets,
+        today_start_utc=today_start_utc,
+        lse_close=lse_close,
+        lse_search_start=lse_search_start,
+        nyse_close=nyse_close,
+        nyse_search_start=nyse_search_start,
+    )
 
-        # Previous LSE close
-        lse_rec = await repository.get_last_price_before(asset, lse_close, lse_search_start)
-
-        # Previous NYSE close
-        nyse_rec = await repository.get_last_price_before(asset, nyse_close, nyse_search_start)
-
-        result[asset] = {
-            'today_open': float(open_rec.price) if open_rec else None,
-            'lse_close': float(lse_rec.price) if lse_rec else None,
-            'nyse_close': float(nyse_rec.price) if nyse_rec else None,
-        }
+    _ref_price_cache['data'] = result
+    _ref_price_cache['expires'] = now_ts + 60
 
     return result

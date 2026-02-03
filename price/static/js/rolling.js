@@ -1,20 +1,22 @@
 /**
  * Toss-style Rolling Number Animation
  * Each digit rolls independently via CSS translateY
+ * Uses pixel-snapped heights to prevent sub-pixel misalignment
  */
 class RollingNumber {
     /**
      * @param {HTMLElement} element - Container element
      * @param {object} options
      * @param {number} options.decimals - Decimal places (default: 2)
-     * @param {number} options.duration - Animation duration ms (default: 400)
+     * @param {number} options.duration - Animation duration ms (default: 600)
      */
     constructor(element, options = {}) {
         this.element = element;
         this.decimals = options.decimals !== undefined ? options.decimals : 2;
-        this.duration = options.duration || 400;
+        this.duration = options.duration || 600;
         this.currentValue = null;
         this.slots = [];
+        this._digitHeight = 0; // measured pixel height (0 = not yet measured)
 
         this.element.classList.add('rolling-number');
     }
@@ -60,6 +62,11 @@ class RollingNumber {
         }
 
         this.currentValue = value;
+
+        // Measure actual pixel height after DOM render, then snap all transforms
+        requestAnimationFrame(() => {
+            this._measureAndSnap();
+        });
     }
 
     _format(value) {
@@ -71,6 +78,43 @@ class RollingNumber {
 
     _isSeparator(char) {
         return char === ',' || char === '.' || char === '-' || char === ' ';
+    }
+
+    /** Measure actual rendered slot height and snap all transforms to integer pixels */
+    _measureAndSnap() {
+        const firstSlot = this.element.querySelector('.digit-slot');
+        if (!firstSlot) return;
+
+        this._digitHeight = Math.round(firstSlot.getBoundingClientRect().height);
+        if (this._digitHeight <= 0) return;
+
+        // Apply pixel-snapped heights to all slots and spans
+        this.element.querySelectorAll('.digit-slot').forEach(el => {
+            el.style.height = this._digitHeight + 'px';
+        });
+        this.element.querySelectorAll('.digit-column span').forEach(el => {
+            el.style.height = this._digitHeight + 'px';
+            el.style.lineHeight = this._digitHeight + 'px';
+        });
+        this.element.querySelectorAll('.digit-separator').forEach(el => {
+            el.style.height = this._digitHeight + 'px';
+            el.style.lineHeight = this._digitHeight + 'px';
+        });
+
+        // Re-apply transforms with pixel values
+        this.slots.forEach(slot => {
+            if (slot.type === 'digit') {
+                slot.column.style.transform = `translateY(${-slot.digit * this._digitHeight}px)`;
+            }
+        });
+    }
+
+    _getTransform(digit) {
+        if (this._digitHeight > 0) {
+            return `translateY(${-digit * this._digitHeight}px)`;
+        }
+        // Fallback before measurement
+        return `translateY(${-digit}em)`;
     }
 
     _createDigitSlot(digit, animate) {
@@ -95,8 +139,7 @@ class RollingNumber {
         slot.appendChild(column);
 
         // Position to show target digit
-        const offset = -(digit * 10);
-        column.style.transform = `translateY(${offset}%)`;
+        column.style.transform = this._getTransform(digit);
 
         // Re-enable transition after render
         if (!animate) {
@@ -133,8 +176,7 @@ class RollingNumber {
                 if (slot.type === 'digit') {
                     const digit = parseInt(newChar);
                     slot.digit = digit;
-                    const offset = -(digit * 10);
-                    slot.column.style.transform = `translateY(${offset}%)`;
+                    slot.column.style.transform = this._getTransform(digit);
                 }
             }
         }
@@ -158,5 +200,10 @@ class RollingNumber {
                 this.slots.push(slot);
             }
         }
+
+        // Measure and snap after rebuild
+        requestAnimationFrame(() => {
+            this._measureAndSnap();
+        });
     }
 }

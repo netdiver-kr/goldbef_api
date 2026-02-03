@@ -103,6 +103,100 @@ class PriceRepository:
         logger.debug(f"Retrieved {len(records)} price records (page {page})")
         return records
 
+    async def get_all_latest_prices(self) -> List[PriceRecord]:
+        """Get the latest price record for every (provider, asset_type) pair in a single query"""
+        # Subquery: MAX(id) per (provider, asset_type) — id is monotonically increasing with timestamp
+        subq = (
+            select(
+                func.max(PriceRecord.id).label('max_id')
+            )
+            .group_by(PriceRecord.provider, PriceRecord.asset_type)
+            .subquery()
+        )
+        query = select(PriceRecord).join(subq, PriceRecord.id == subq.c.max_id)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_reference_prices_bulk(
+        self,
+        assets: List[str],
+        today_start_utc: datetime,
+        lse_close: datetime,
+        lse_search_start: datetime,
+        nyse_close: datetime,
+        nyse_search_start: datetime,
+    ) -> dict:
+        """Get all reference prices (open, lse_close, nyse_close) for all assets in 3 queries"""
+        from sqlalchemy import case, literal_column
+
+        result = {}
+        for asset in assets:
+            result[asset] = {'today_open': None, 'lse_close': None, 'nyse_close': None}
+
+        # 1) Today's open: first record after today_start_utc per asset
+        open_subq = (
+            select(
+                PriceRecord.asset_type,
+                func.min(PriceRecord.id).label('min_id')
+            )
+            .where(
+                and_(
+                    PriceRecord.asset_type.in_(assets),
+                    PriceRecord.timestamp >= today_start_utc
+                )
+            )
+            .group_by(PriceRecord.asset_type)
+            .subquery()
+        )
+        open_q = select(PriceRecord).join(open_subq, PriceRecord.id == open_subq.c.min_id)
+        open_res = await self.session.execute(open_q)
+        for rec in open_res.scalars().all():
+            result[rec.asset_type]['today_open'] = float(rec.price)
+
+        # 2) LSE close: last record in [lse_search_start, lse_close] per asset
+        lse_subq = (
+            select(
+                PriceRecord.asset_type,
+                func.max(PriceRecord.id).label('max_id')
+            )
+            .where(
+                and_(
+                    PriceRecord.asset_type.in_(assets),
+                    PriceRecord.timestamp >= lse_search_start,
+                    PriceRecord.timestamp <= lse_close
+                )
+            )
+            .group_by(PriceRecord.asset_type)
+            .subquery()
+        )
+        lse_q = select(PriceRecord).join(lse_subq, PriceRecord.id == lse_subq.c.max_id)
+        lse_res = await self.session.execute(lse_q)
+        for rec in lse_res.scalars().all():
+            result[rec.asset_type]['lse_close'] = float(rec.price)
+
+        # 3) NYSE close: last record in [nyse_search_start, nyse_close] per asset
+        nyse_subq = (
+            select(
+                PriceRecord.asset_type,
+                func.max(PriceRecord.id).label('max_id')
+            )
+            .where(
+                and_(
+                    PriceRecord.asset_type.in_(assets),
+                    PriceRecord.timestamp >= nyse_search_start,
+                    PriceRecord.timestamp <= nyse_close
+                )
+            )
+            .group_by(PriceRecord.asset_type)
+            .subquery()
+        )
+        nyse_q = select(PriceRecord).join(nyse_subq, PriceRecord.id == nyse_subq.c.max_id)
+        nyse_res = await self.session.execute(nyse_q)
+        for rec in nyse_res.scalars().all():
+            result[rec.asset_type]['nyse_close'] = float(rec.price)
+
+        return result
+
     async def get_latest_by_provider_and_asset(
         self,
         provider: str,

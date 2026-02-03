@@ -26,6 +26,7 @@ class PriceRecord(Base):
     # Composite index for common queries
     __table_args__ = (
         Index('idx_provider_asset_time', 'provider', 'asset_type', 'timestamp'),
+        Index('idx_asset_timestamp', 'asset_type', 'timestamp'),
     )
 
     def __repr__(self):
