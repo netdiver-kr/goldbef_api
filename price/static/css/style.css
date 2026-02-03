@@ -948,25 +948,6 @@ thead .grid-label-col {
     background: hsl(0 0% 100%);
 }
 
-/* --- Skeleton Loading Animation --- */
-@keyframes skeleton-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-.skeleton {
-    background: linear-gradient(90deg, var(--muted) 25%, var(--border) 50%, var(--muted) 75%) !important;
-    background-size: 200% 100% !important;
-    animation: skeleton-shimmer 1.5s ease-in-out infinite;
-    border-radius: 4px;
-    color: transparent !important;
-    min-width: 60px;
-    display: inline-block;
-}
-
-.skeleton * {
-    visibility: hidden;
-}
 
 /* ============================================
    Animations: Rolling Numbers, Flash, Burn-in

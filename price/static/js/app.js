@@ -276,10 +276,9 @@ class PriceApp {
                     roller.setValueImmediate(p.price);
                 }
 
-                // Bid/Ask + remove skeleton loading state
+                // Bid/Ask
                 const card = document.querySelector(`.price-card[data-asset="${p.asset_type}"]`);
                 if (card) {
-                    card.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
                     const bidEl = card.querySelector('.bid-value');
                     const askEl = card.querySelector('.ask-value');
                     if (bidEl) bidEl.textContent = p.bid ? this._fmt(p.bid, meta.decimals) : '--';
@@ -470,7 +469,7 @@ class PriceApp {
         const el = document.getElementById(id);
         if (el) {
             el.textContent = text;
-            el.classList.remove('placeholder', 'skeleton');
+            el.classList.remove('placeholder');
         }
     }
 
