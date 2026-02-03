@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Application
     DEBUG: bool = False
     LOG_LEVEL: str = "WARNING"
-    DATA_RETENTION_DAYS: int = 30
+    DATA_RETENTION_DAYS: int = 7
 
     # WebSocket Configuration
     WS_RECONNECT_DELAY: int = 1  # seconds

@@ -284,11 +284,10 @@ class PriceRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def delete_old_records(self, days: int = 30) -> int:
-        """Delete records older than specified days using bulk DELETE"""
+    async def delete_old_records(self, days: int = 7) -> int:
+        """Delete records older than specified days, then VACUUM to reclaim space"""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
 
-        # Count before delete
         count_query = select(func.count(PriceRecord.id)).where(
             PriceRecord.timestamp < cutoff_date
         )
@@ -299,6 +298,14 @@ class PriceRepository:
             stmt = delete(PriceRecord).where(PriceRecord.timestamp < cutoff_date)
             await self.session.execute(stmt)
             await self.session.commit()
+
+            # VACUUM to reclaim disk space after large deletions
+            try:
+                from sqlalchemy import text
+                await self.session.execute(text("VACUUM"))
+                logger.info(f"VACUUM completed after deleting {count} records")
+            except Exception as e:
+                logger.warning(f"VACUUM skipped: {e}")
 
         logger.info(f"Deleted {count} old records (older than {days} days)")
         return count

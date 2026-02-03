@@ -65,6 +65,59 @@ async def lifespan(app: FastAPI):
 
     cleanup_task = asyncio.create_task(_db_cleanup_loop())
 
+    # Cache warmup: pre-populate latest-all and reference-prices caches
+    async def _cache_warmup():
+        import time
+        from datetime import datetime as dt, timedelta as td
+        try:
+            await asyncio.sleep(2)  # Wait for DB init
+            async for session in get_db_session():
+                repo = PriceRepository(session)
+
+                # Warmup latest-all cache
+                providers = ['eodhd', 'twelve_data', 'massive']
+                assets_list = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'jpy_krw', 'cny_krw', 'eur_krw']
+                results = []
+                for provider in providers:
+                    for asset in assets_list:
+                        record = await repo.get_latest_by_provider_and_asset(provider, asset)
+                        if record:
+                            results.append({
+                                "provider": record.provider,
+                                "asset_type": record.asset_type,
+                                "price": float(record.price),
+                                "bid": float(record.bid) if record.bid else None,
+                                "ask": float(record.ask) if record.ask else None,
+                                "volume": float(record.volume) if record.volume else None,
+                                "timestamp": record.timestamp.isoformat()
+                            })
+                api._latest_all_cache['data'] = {"prices": results}
+                api._latest_all_cache['expires'] = time.time() + 10  # Longer TTL for warmup
+
+                # Warmup reference-prices cache
+                now_utc = dt.utcnow()
+                kst_today = (now_utc + td(hours=9)).date()
+                today_start_utc = dt(kst_today.year, kst_today.month, kst_today.day, 8, 0) - td(hours=9)
+                lse_close = api._most_recent_close_time(now_utc, 16, 30)
+                lse_search_start = dt(lse_close.year, lse_close.month, lse_close.day, 0, 0)
+                nyse_close = api._most_recent_close_time(now_utc, 22, 0)
+                nyse_search_start = dt(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
+                ref_assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw']
+                ref_result = await repo.get_reference_prices_bulk(
+                    assets=ref_assets,
+                    today_start_utc=today_start_utc,
+                    lse_close=lse_close, lse_search_start=lse_search_start,
+                    nyse_close=nyse_close, nyse_search_start=nyse_search_start,
+                )
+                api._ref_price_cache['data'] = ref_result
+                api._ref_price_cache['expires'] = time.time() + 60
+
+                logger.info(f"Cache warmup: latest-all={len(results)} prices, reference-prices={len(ref_result)} assets")
+        except Exception as e:
+            logger.warning(f"Cache warmup failed (will populate on first request): {e}")
+
+    asyncio.create_task(_cache_warmup())
+
     logger.success("Application started successfully")
 
     yield
