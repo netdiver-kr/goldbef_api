@@ -947,3 +947,95 @@ thead .grid-label-col {
 [data-theme="dark"] .switch input:checked + .slider::before {
     background: hsl(0 0% 100%);
 }
+
+/* --- Skeleton Loading Animation --- */
+@keyframes skeleton-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, var(--muted) 25%, var(--border) 50%, var(--muted) 75%) !important;
+    background-size: 200% 100% !important;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    color: transparent !important;
+    min-width: 60px;
+    display: inline-block;
+}
+
+.skeleton * {
+    visibility: hidden;
+}
+
+/* ============================================
+   Animations: Rolling Numbers, Flash, Burn-in
+   ============================================ */
+
+/* --- Toss-style Rolling Number Animation --- */
+.rolling-number {
+    display: inline-flex;
+    overflow: hidden;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.digit-slot {
+    display: inline-block;
+    height: 1em;
+    overflow: hidden;
+    position: relative;
+}
+
+.digit-column {
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+}
+
+.digit-column span {
+    display: block;
+    height: 1em;
+    line-height: 1;
+    text-align: center;
+}
+
+.digit-separator {
+    display: inline-block;
+    height: 1em;
+    line-height: 1;
+}
+
+/* --- Price Flash Animation (fade in → fade out) --- */
+@keyframes flash-up {
+    0% { background: var(--card); }
+    30% { background: var(--up-bg); }
+    100% { background: var(--card); }
+}
+
+@keyframes flash-down {
+    0% { background: var(--card); }
+    30% { background: var(--down-bg); }
+    100% { background: var(--card); }
+}
+
+.price-card.flash-up {
+    animation: flash-up 1.5s ease-in-out;
+}
+
+.price-card.flash-down {
+    animation: flash-down 1.5s ease-in-out;
+}
+
+/* --- Burn-in Prevention: Subtle Pixel Shift --- */
+@keyframes pixel-shift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(1px, 0.5px); }
+    50%  { transform: translate(-0.5px, 1px); }
+    75%  { transform: translate(0.5px, -1px); }
+    100% { transform: translate(0, 0); }
+}
+
+.burn-in-shift {
+    transition: transform 2s ease-in-out;
+}

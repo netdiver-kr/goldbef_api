@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EurasiaMetal - 실시간 귀금속 시세</title>
-    <link rel="stylesheet" href="static/css/style.css?v=20260203f">
-    <link rel="stylesheet" href="static/css/animations.css?v=20260203f">
+    <link rel="preconnect" href="/api" crossorigin>
+    <link rel="preload" href="static/css/style.css?v=20260203g" as="style">
+    <link rel="preload" href="static/js/app.js?v=20260203g" as="script">
+    <link rel="stylesheet" href="static/css/style.css?v=20260203g">
 </head>
 <body>
     <!-- Header -->
@@ -31,12 +33,12 @@
 
                 </div>
                 <div class="price-main">
-                    <span class="price-value" data-asset="gold">--</span>
-                    <span class="price-change">--</span>
+                    <span class="price-value skeleton" data-asset="gold">--</span>
+                    <span class="price-change skeleton">--</span>
                 </div>
                 <div class="price-bidask">
-                    <span>Bid: <strong class="bid-value">--</strong></span>
-                    <span>Ask: <strong class="ask-value">--</strong></span>
+                    <span>Bid: <strong class="bid-value skeleton">--</strong></span>
+                    <span>Ask: <strong class="ask-value skeleton">--</strong></span>
                 </div>
             </div>
 
@@ -47,12 +49,12 @@
 
                 </div>
                 <div class="price-main">
-                    <span class="price-value" data-asset="silver">--</span>
-                    <span class="price-change">--</span>
+                    <span class="price-value skeleton" data-asset="silver">--</span>
+                    <span class="price-change skeleton">--</span>
                 </div>
                 <div class="price-bidask">
-                    <span>Bid: <strong class="bid-value">--</strong></span>
-                    <span>Ask: <strong class="ask-value">--</strong></span>
+                    <span>Bid: <strong class="bid-value skeleton">--</strong></span>
+                    <span>Ask: <strong class="ask-value skeleton">--</strong></span>
                 </div>
             </div>
 
@@ -63,12 +65,12 @@
 
                 </div>
                 <div class="price-main">
-                    <span class="price-value" data-asset="platinum">--</span>
-                    <span class="price-change">--</span>
+                    <span class="price-value skeleton" data-asset="platinum">--</span>
+                    <span class="price-change skeleton">--</span>
                 </div>
                 <div class="price-bidask">
-                    <span>Bid: <strong class="bid-value">--</strong></span>
-                    <span>Ask: <strong class="ask-value">--</strong></span>
+                    <span>Bid: <strong class="bid-value skeleton">--</strong></span>
+                    <span>Ask: <strong class="ask-value skeleton">--</strong></span>
                 </div>
             </div>
 
@@ -79,12 +81,12 @@
 
                 </div>
                 <div class="price-main">
-                    <span class="price-value" data-asset="palladium">--</span>
-                    <span class="price-change">--</span>
+                    <span class="price-value skeleton" data-asset="palladium">--</span>
+                    <span class="price-change skeleton">--</span>
                 </div>
                 <div class="price-bidask">
-                    <span>Bid: <strong class="bid-value">--</strong></span>
-                    <span>Ask: <strong class="ask-value">--</strong></span>
+                    <span>Bid: <strong class="bid-value skeleton">--</strong></span>
+                    <span>Ask: <strong class="ask-value skeleton">--</strong></span>
                 </div>
             </div>
 
@@ -95,12 +97,12 @@
 
                 </div>
                 <div class="price-main">
-                    <span class="price-value" data-asset="usd_krw">--</span>
-                    <span class="price-change">--</span>
+                    <span class="price-value skeleton" data-asset="usd_krw">--</span>
+                    <span class="price-change skeleton">--</span>
                 </div>
                 <div class="price-bidask">
-                    <span>Bid: <strong class="bid-value">--</strong></span>
-                    <span>Ask: <strong class="ask-value">--</strong></span>
+                    <span>Bid: <strong class="bid-value skeleton">--</strong></span>
+                    <span>Ask: <strong class="ask-value skeleton">--</strong></span>
                 </div>
             </div>
         </section>
@@ -115,11 +117,11 @@
                 <div class="info-card-title">최초고시환율 (USD/KRW)</div>
                 <div class="info-row">
                     <span class="info-label">고시환율</span>
-                    <span class="info-value placeholder" id="initial-rate-value">API 연동 대기</span>
+                    <span class="info-value placeholder skeleton" id="initial-rate-value">API 연동 대기</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">기준일</span>
-                    <span class="info-value placeholder" id="initial-rate-date">--</span>
+                    <span class="info-value placeholder skeleton" id="initial-rate-date">--</span>
                 </div>
             </div>
 
@@ -281,9 +283,14 @@
         </div>
     </aside>
 
-    <script src="static/js/settings.js?v=20260203f"></script>
-    <script src="static/js/rolling.js?v=20260203f"></script>
-    <script src="static/js/grid.js?v=20260203f"></script>
-    <script src="static/js/app.js?v=20260203f"></script>
+    <script src="static/js/settings.js?v=20260203g"></script>
+    <script src="static/js/rolling.js?v=20260203g"></script>
+    <script src="static/js/grid.js?v=20260203g"></script>
+    <script src="static/js/app.js?v=20260203g"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/price/sw.js').catch(() => {});
+        }
+    </script>
 </body>
 </html>
