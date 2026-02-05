@@ -97,9 +97,9 @@ class LondonFixClient:
 
     @staticmethod
     def _london_date_for_slot(utc_date: date, hour: int) -> date:
-        """Determine the London business date for a given UTC slot.
-        16:30 UTC → same UTC date is the London date
-        00:30 UTC → previous UTC date is the London date
+        """Determine the London Fix business date for a given UTC slot.
+        16:30 UTC → same UTC date (PM fix done)
+        00:30 UTC → previous UTC date (data from yesterday)
         """
         return utc_date if hour >= 8 else utc_date - timedelta(days=1)
 
@@ -192,7 +192,7 @@ class LondonFixClient:
                     if not self.running:
                         break
                     try:
-                        if await self._fetch():
+                        if await self._fetch(london_date_iso):
                             success = True
                             break
                     except Exception as e:
@@ -235,8 +235,11 @@ class LondonFixClient:
         self.running = False
         logger.info("[LondonFix] Stopped")
 
-    async def _fetch(self) -> bool:
-        """Fetch LBMA fix prices from Metals.dev. Returns True if data updated."""
+    async def _fetch(self, london_date_iso: str = None) -> bool:
+        """Fetch LBMA fix prices from Metals.dev. Returns True if data updated.
+        london_date_iso: the London business date this data corresponds to.
+        If None (startup), auto-calculated from current UTC time.
+        """
         params = {
             'api_key': self.api_key,
             'authority': 'lbma',
@@ -279,7 +282,16 @@ class LondonFixClient:
 
         if updated:
             self._cache['last_updated'] = datetime.now(KST).isoformat()
-            self._cache['date'] = datetime.now(timezone.utc).date().isoformat()
+            if london_date_iso:
+                self._cache['date'] = london_date_iso
+            else:
+                # Startup fetch: calculate London date from current UTC time
+                utc_now = datetime.now(timezone.utc)
+                london_date = self._london_date_for_slot(utc_now.date(), utc_now.hour)
+                # Walk back to last business day if weekend/holiday
+                while not self._is_business_day(london_date):
+                    london_date -= timedelta(days=1)
+                self._cache['date'] = london_date.isoformat()
             logger.info(
                 f"[LondonFix] Gold AM={self._cache['gold_am']} PM={self._cache['gold_pm']}, "
                 f"Silver={self._cache['silver']}, "

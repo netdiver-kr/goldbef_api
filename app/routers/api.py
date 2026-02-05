@@ -256,31 +256,40 @@ def _most_recent_close_time(now_utc: datetime, close_hour: int, close_minute: in
     return datetime(d.year, d.month, d.day, close_hour, close_minute)
 
 
-_ref_price_cache = {'data': None, 'expires': 0}
+_ref_price_cache = {}  # { provider_key: {'data': ..., 'expires': ...} }
 
 
 @router.get("/reference-prices")
 async def get_reference_prices(
+    provider: Optional[str] = Query(None, description="Filter by data provider"),
     session: AsyncSession = Depends(get_db_session)
 ):
     """
     Get reference prices for change calculation.
 
     Returns today's open, previous LSE close (16:30 UTC), and previous NYSE close (22:00 UTC)
-    for each asset. Uses bulk queries (3 instead of 15) and 60-second cache.
+    for each asset. When provider is specified, only that provider's records are used.
+    Uses per-provider 60-second cache.
     """
     import time
     now_ts = time.time()
 
-    # Return cached data if fresh (60 seconds)
-    if _ref_price_cache['data'] and now_ts < _ref_price_cache['expires']:
-        return _ref_price_cache['data']
+    cache_key = provider or '__all__'
+    cached = _ref_price_cache.get(cache_key)
+    if cached and now_ts < cached['expires']:
+        return cached['data']
 
     repository = PriceRepository(session)
     now_utc = datetime.utcnow()
-    kst_today = (now_utc + timedelta(hours=9)).date()
+    kst_now = now_utc + timedelta(hours=9)
+    kst_date = kst_now.date()
 
-    today_start_utc = datetime(kst_today.year, kst_today.month, kst_today.day, 8, 0) - timedelta(hours=9)
+    # Before 8 AM KST → use previous day's 8 AM as reference start
+    # so change values keep showing until new day's 8 AM data arrives
+    if kst_now.hour < 8:
+        kst_date = kst_date - timedelta(days=1)
+
+    today_start_utc = datetime(kst_date.year, kst_date.month, kst_date.day, 8, 0) - timedelta(hours=9)
 
     lse_close = _most_recent_close_time(now_utc, 16, 30)
     lse_search_start = datetime(lse_close.year, lse_close.month, lse_close.day, 0, 0)
@@ -297,9 +306,9 @@ async def get_reference_prices(
         lse_search_start=lse_search_start,
         nyse_close=nyse_close,
         nyse_search_start=nyse_search_start,
+        provider=provider,
     )
 
-    _ref_price_cache['data'] = result
-    _ref_price_cache['expires'] = now_ts + 60
+    _ref_price_cache[cache_key] = {'data': result, 'expires': now_ts + 60}
 
     return result

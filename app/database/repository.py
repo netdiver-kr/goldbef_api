@@ -125,26 +125,29 @@ class PriceRepository:
         lse_search_start: datetime,
         nyse_close: datetime,
         nyse_search_start: datetime,
+        provider: str = None,
     ) -> dict:
-        """Get all reference prices (open, lse_close, nyse_close) for all assets in 3 queries"""
-        from sqlalchemy import case, literal_column
+        """Get all reference prices (open, lse_close, nyse_close) for all assets in 3 queries.
+        When provider is specified, only that provider's records are used."""
 
         result = {}
         for asset in assets:
             result[asset] = {'today_open': None, 'lse_close': None, 'nyse_close': None}
 
         # 1) Today's open: first record after today_start_utc per asset
+        open_filters = [
+            PriceRecord.asset_type.in_(assets),
+            PriceRecord.timestamp >= today_start_utc,
+        ]
+        if provider:
+            open_filters.append(PriceRecord.provider == provider)
+
         open_subq = (
             select(
                 PriceRecord.asset_type,
                 func.min(PriceRecord.id).label('min_id')
             )
-            .where(
-                and_(
-                    PriceRecord.asset_type.in_(assets),
-                    PriceRecord.timestamp >= today_start_utc
-                )
-            )
+            .where(and_(*open_filters))
             .group_by(PriceRecord.asset_type)
             .subquery()
         )
@@ -154,18 +157,20 @@ class PriceRepository:
             result[rec.asset_type]['today_open'] = float(rec.price)
 
         # 2) LSE close: last record in [lse_search_start, lse_close] per asset
+        lse_filters = [
+            PriceRecord.asset_type.in_(assets),
+            PriceRecord.timestamp >= lse_search_start,
+            PriceRecord.timestamp <= lse_close,
+        ]
+        if provider:
+            lse_filters.append(PriceRecord.provider == provider)
+
         lse_subq = (
             select(
                 PriceRecord.asset_type,
                 func.max(PriceRecord.id).label('max_id')
             )
-            .where(
-                and_(
-                    PriceRecord.asset_type.in_(assets),
-                    PriceRecord.timestamp >= lse_search_start,
-                    PriceRecord.timestamp <= lse_close
-                )
-            )
+            .where(and_(*lse_filters))
             .group_by(PriceRecord.asset_type)
             .subquery()
         )
@@ -175,18 +180,20 @@ class PriceRepository:
             result[rec.asset_type]['lse_close'] = float(rec.price)
 
         # 3) NYSE close: last record in [nyse_search_start, nyse_close] per asset
+        nyse_filters = [
+            PriceRecord.asset_type.in_(assets),
+            PriceRecord.timestamp >= nyse_search_start,
+            PriceRecord.timestamp <= nyse_close,
+        ]
+        if provider:
+            nyse_filters.append(PriceRecord.provider == provider)
+
         nyse_subq = (
             select(
                 PriceRecord.asset_type,
                 func.max(PriceRecord.id).label('max_id')
             )
-            .where(
-                and_(
-                    PriceRecord.asset_type.in_(assets),
-                    PriceRecord.timestamp >= nyse_search_start,
-                    PriceRecord.timestamp <= nyse_close
-                )
-            )
+            .where(and_(*nyse_filters))
             .group_by(PriceRecord.asset_type)
             .subquery()
         )
@@ -284,31 +291,50 @@ class PriceRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def delete_old_records(self, days: int = 7) -> int:
-        """Delete records older than specified days, then VACUUM to reclaim space"""
+    async def delete_old_records(self, days: int = 7, batch_size: int = 5000) -> int:
+        """Delete records older than specified days in small batches to avoid DB lock"""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
+        total_deleted = 0
 
-        count_query = select(func.count(PriceRecord.id)).where(
-            PriceRecord.timestamp < cutoff_date
-        )
-        result = await self.session.execute(count_query)
-        count = result.scalar() or 0
+        while True:
+            # Find batch of IDs to delete
+            id_query = (
+                select(PriceRecord.id)
+                .where(PriceRecord.timestamp < cutoff_date)
+                .order_by(PriceRecord.id)
+                .limit(batch_size)
+            )
+            result = await self.session.execute(id_query)
+            ids = [row[0] for row in result.all()]
 
-        if count > 0:
-            stmt = delete(PriceRecord).where(PriceRecord.timestamp < cutoff_date)
+            if not ids:
+                break
+
+            stmt = delete(PriceRecord).where(PriceRecord.id.in_(ids))
             await self.session.execute(stmt)
             await self.session.commit()
+            total_deleted += len(ids)
 
-            # VACUUM to reclaim disk space after large deletions
+            logger.info(f"Cleanup batch: deleted {len(ids)} records (total so far: {total_deleted})")
+
+            # Yield control to other tasks between batches
+            import asyncio
+            await asyncio.sleep(0.5)
+
+        if total_deleted > 0:
+            logger.info(f"Deleted {total_deleted} old records (older than {days} days)")
+
+            # WAL checkpoint to merge WAL back into main DB and reclaim space
             try:
                 from sqlalchemy import text
-                await self.session.execute(text("VACUUM"))
-                logger.info(f"VACUUM completed after deleting {count} records")
+                await self.session.execute(text("PRAGMA wal_checkpoint(TRUNCATE)"))
+                logger.info("WAL checkpoint completed")
             except Exception as e:
-                logger.warning(f"VACUUM skipped: {e}")
+                logger.warning(f"WAL checkpoint skipped: {e}")
+        else:
+            logger.info(f"No old records to delete (older than {days} days)")
 
-        logger.info(f"Deleted {count} old records (older than {days} days)")
-        return count
+        return total_deleted
 
     async def get_record_count(
         self,

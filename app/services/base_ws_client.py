@@ -1,5 +1,7 @@
 import asyncio
 import json
+import traceback
+import time
 from abc import ABC, abstractmethod
 from typing import Callable, Optional, Dict, Any
 import websockets
@@ -22,6 +24,13 @@ class BaseWebSocketClient(ABC):
         self.reconnect_delay = settings.WS_RECONNECT_DELAY
         self.max_reconnect_delay = settings.WS_MAX_RECONNECT_DELAY
         self.current_reconnect_delay = self.reconnect_delay
+        self.message_timeout = settings.WS_MESSAGE_TIMEOUT
+
+        # Monitoring
+        self._last_message_time: float = 0
+        self._message_count: int = 0
+        self._error_count: int = 0
+        self._watchdog_task: Optional[asyncio.Task] = None
 
     @property
     @abstractmethod
@@ -64,6 +73,25 @@ class BaseWebSocketClient(ABC):
         """
         pass
 
+    async def _watchdog(self):
+        """Monitor data receive timeout - force reconnect if no messages received"""
+        while self.running:
+            await asyncio.sleep(self.message_timeout)
+            if not self.running or not self.ws:
+                break
+
+            elapsed = time.time() - self._last_message_time
+            if self._last_message_time > 0 and elapsed > self.message_timeout:
+                logger.warning(
+                    f"[{self.provider_name}] No data received for {elapsed:.0f}s "
+                    f"(timeout={self.message_timeout}s), forcing reconnect"
+                )
+                try:
+                    await self.ws.close()
+                except Exception:
+                    pass
+                break
+
     async def connect(self):
         """Connect to WebSocket and start receiving messages"""
         url = self.get_websocket_url()
@@ -77,7 +105,11 @@ class BaseWebSocketClient(ABC):
                     ping_timeout=10
                 ) as ws:
                     self.ws = ws
-                    logger.success(f"[{self.provider_name}] Connected successfully")
+                    self._last_message_time = time.time()
+                    logger.info(
+                        f"[{self.provider_name}] Connected successfully "
+                        f"(total msgs={self._message_count}, errors={self._error_count})"
+                    )
 
                     # Send subscribe message
                     subscribe_msg = self.get_subscribe_message()
@@ -88,32 +120,62 @@ class BaseWebSocketClient(ABC):
                     # Reset reconnect delay on successful connection
                     self.current_reconnect_delay = self.reconnect_delay
 
-                    # Message receiving loop
-                    async for message in ws:
-                        if not self.running:
-                            break
+                    # Start watchdog for data timeout detection
+                    self._watchdog_task = asyncio.create_task(self._watchdog())
 
-                        try:
-                            # Parse message
-                            parsed_data = self.parse_message(message)
+                    try:
+                        # Message receiving loop
+                        async for message in ws:
+                            if not self.running:
+                                break
 
-                            if parsed_data:
-                                # Ensure provider is set
-                                if 'provider' not in parsed_data:
-                                    parsed_data['provider'] = self.provider_name
+                            self._last_message_time = time.time()
+                            self._message_count += 1
 
-                                # Call callback
-                                await self.on_message(parsed_data)
-                        except Exception as e:
-                            logger.error(f"[{self.provider_name}] Error parsing message: {e}")
-                            logger.debug(f"[{self.provider_name}] Raw message: {message}")
+                            try:
+                                # Parse message
+                                parsed_data = self.parse_message(message)
+
+                                if parsed_data:
+                                    # Ensure provider is set
+                                    if 'provider' not in parsed_data:
+                                        parsed_data['provider'] = self.provider_name
+
+                                    # Call callback
+                                    await self.on_message(parsed_data)
+                            except Exception as e:
+                                self._error_count += 1
+                                logger.error(
+                                    f"[{self.provider_name}] Error parsing message: "
+                                    f"{type(e).__name__}: {e}"
+                                )
+                                logger.debug(
+                                    f"[{self.provider_name}] Raw message: "
+                                    f"{str(message)[:500]}"
+                                )
+                    finally:
+                        # Cancel watchdog when connection ends
+                        if self._watchdog_task and not self._watchdog_task.done():
+                            self._watchdog_task.cancel()
+                            try:
+                                await self._watchdog_task
+                            except asyncio.CancelledError:
+                                pass
 
             except WebSocketException as e:
-                logger.error(f"[{self.provider_name}] WebSocket error: {e}")
+                self._error_count += 1
+                logger.error(
+                    f"[{self.provider_name}] WebSocket error: "
+                    f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+                )
                 if self.running:
                     await self._reconnect()
             except Exception as e:
-                logger.error(f"[{self.provider_name}] Unexpected error: {e}")
+                self._error_count += 1
+                logger.error(
+                    f"[{self.provider_name}] Unexpected error: "
+                    f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+                )
                 if self.running:
                     await self._reconnect()
 
@@ -141,11 +203,30 @@ class BaseWebSocketClient(ABC):
 
     async def stop(self):
         """Stop the WebSocket client"""
-        logger.info(f"[{self.provider_name}] Stopping WebSocket client")
+        logger.info(
+            f"[{self.provider_name}] Stopping WebSocket client "
+            f"(total msgs={self._message_count}, errors={self._error_count})"
+        )
         self.running = False
+        if self._watchdog_task and not self._watchdog_task.done():
+            self._watchdog_task.cancel()
         if self.ws:
             await self.ws.close()
 
     def is_connected(self) -> bool:
         """Check if WebSocket is currently connected"""
         return self.ws is not None and self.ws.open
+
+    def get_health(self) -> Dict[str, Any]:
+        """Get connection health metrics"""
+        now = time.time()
+        since_last = now - self._last_message_time if self._last_message_time > 0 else None
+        return {
+            "provider": self.provider_name,
+            "connected": self.is_connected(),
+            "running": self.running,
+            "message_count": self._message_count,
+            "error_count": self._error_count,
+            "seconds_since_last_message": round(since_last, 1) if since_last else None,
+            "message_timeout": self.message_timeout,
+        }

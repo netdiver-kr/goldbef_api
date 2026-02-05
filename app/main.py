@@ -41,7 +41,8 @@ async def lifespan(app: FastAPI):
     # Run initial DB cleanup on startup, then every 6 hours
     async def _db_cleanup_loop():
         try:
-            # Initial cleanup on startup
+            # Wait for other services to stabilize before cleanup
+            await asyncio.sleep(10)
             async for session in get_db_session():
                 repo = PriceRepository(session)
                 deleted = await repo.delete_old_records(days=settings.DATA_RETENTION_DAYS)

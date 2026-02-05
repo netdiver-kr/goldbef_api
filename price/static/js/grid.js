@@ -8,15 +8,12 @@ class KRWGrid {
 
     // Percentage steps per metal group
     static PCT_GOLD_SILVER = [
-        100.00, 100.10, 100.20, 100.25, 100.30, 100.35, 100.40, 100.45,
-        100.50, 100.55, 100.60, 100.65, 100.70, 100.75, 100.80, 100.90,
-        101.00, 101.10, 101.20, 101.30, 101.40, 101.50, 101.60, 101.70,
-        101.80, 101.90, 102.00, 102.20, 102.50, 103.00, 104.00, 105.00,
-        107.00, 110.00
+        100.00, 101.00, 102.00, 103.00, 104.00, 105.00,
+        106.00, 107.00, 108.00, 109.00, 110.00
     ];
 
     static PCT_PLAT_PALL = [
-        100.00, 101.00, 101.50, 101.80, 102.00, 102.50, 103.00, 104.00
+        100.00, 101.00, 102.00, 103.00, 104.00, 105.00
     ];
 
     static METALS = {
@@ -100,7 +97,7 @@ class KRWGrid {
         headerRow.innerHTML = '<th class="grid-label-col"></th>';
         pcts.forEach(pct => {
             const th = document.createElement('th');
-            th.textContent = pct.toFixed(2) + '%';
+            th.textContent = (pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(2)) + '%';
             if (pct === 100.00) th.classList.add('pct-100');
             headerRow.appendChild(th);
         });

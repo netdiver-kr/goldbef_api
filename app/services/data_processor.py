@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, Any, List
 from datetime import datetime
 from app.database.repository import PriceRepository
@@ -9,7 +10,7 @@ class DataProcessor:
     """Process and save price data from WebSocket clients"""
 
     def __init__(self):
-        pass
+        self._write_lock = asyncio.Lock()
 
     async def save_price(self, data: Dict[str, Any]):
         """
@@ -20,18 +21,19 @@ class DataProcessor:
                 logger.warning(f"Invalid data format, missing required fields: {data}")
                 return
 
-            async for session in get_db_session():
-                repository = PriceRepository(session)
-                await repository.insert_price_record(
-                    provider=data['provider'],
-                    asset_type=data['asset_type'],
-                    price=data['price'],
-                    bid=data.get('bid'),
-                    ask=data.get('ask'),
-                    volume=data.get('volume'),
-                    timestamp=data.get('timestamp', datetime.utcnow()),
-                    metadata=data.get('metadata')
-                )
+            async with self._write_lock:
+                async for session in get_db_session():
+                    repository = PriceRepository(session)
+                    await repository.insert_price_record(
+                        provider=data['provider'],
+                        asset_type=data['asset_type'],
+                        price=data['price'],
+                        bid=data.get('bid'),
+                        ask=data.get('ask'),
+                        volume=data.get('volume'),
+                        timestamp=data.get('timestamp', datetime.utcnow()),
+                        metadata=data.get('metadata')
+                    )
 
         except Exception as e:
             logger.error(f"Error saving price data: {e}")
@@ -52,9 +54,10 @@ class DataProcessor:
             if not valid_records:
                 return
 
-            async for session in get_db_session():
-                repository = PriceRepository(session)
-                await repository.insert_price_records_batch(valid_records)
+            async with self._write_lock:
+                async for session in get_db_session():
+                    repository = PriceRepository(session)
+                    await repository.insert_price_records_batch(valid_records)
 
             logger.debug(f"Batch saved {len(valid_records)} price records")
 

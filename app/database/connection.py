@@ -1,6 +1,6 @@
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool
 from app.config import get_settings
 from app.models.price_data import Base
 from app.utils.logger import app_logger as logger
@@ -21,11 +21,21 @@ class DatabaseConnection:
         is_sqlite = "sqlite" in self.settings.DATABASE_URL
 
         # Create async engine
+        engine_kwargs = {
+            "echo": self.settings.DEBUG,
+            "pool_pre_ping": True,
+        }
+
+        if is_sqlite:
+            # Use QueuePool instead of StaticPool to allow concurrent read/write
+            engine_kwargs["poolclass"] = QueuePool
+            engine_kwargs["pool_size"] = 3
+            engine_kwargs["max_overflow"] = 2
+            engine_kwargs["connect_args"] = {"check_same_thread": False}
+
         self.engine = create_async_engine(
             self.settings.DATABASE_URL,
-            echo=self.settings.DEBUG,
-            poolclass=StaticPool if is_sqlite else None,
-            pool_pre_ping=True
+            **engine_kwargs
         )
 
         # Enable WAL mode for SQLite (improves concurrent read/write)

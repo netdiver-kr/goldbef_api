@@ -58,7 +58,7 @@ class PriceApp {
         });
 
         // Settings event listeners
-        this.settings.on('provider', () => { this.fallbackLock = {}; this._loadInitialPrices(); });
+        this.settings.on('provider', () => { this.fallbackLock = {}; this._loadInitialPrices(); this._loadReferencePrices(); });
         this.settings.on('interval', () => {
             // Interval change - throttle is handled in handleUpdate
         });
@@ -307,7 +307,8 @@ class PriceApp {
     // --- Reference Prices ---
     async _loadReferencePrices() {
         try {
-            const response = await fetch('/api/reference-prices');
+            const provider = this.settings.getProvider();
+            const response = await fetch(`/api/reference-prices?provider=${provider}`);
             if (!response.ok) return;
             const data = await response.json();
             this.allRefPrices = data;
