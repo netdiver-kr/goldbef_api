@@ -101,7 +101,12 @@ class PriceApp {
         this._dailyRefreshTimer = setInterval(() => {
             this._loadLondonFix();
             this._loadInitialRate();
+            this._loadReferencePrices(); // Also refresh reference prices
         }, 1800000);
+
+        // Schedule-based refresh for critical times (KST 08:00, 08:05, 08:10)
+        // KST = UTC+9, so 08:00 KST = 23:00 UTC previous day
+        this._scheduleKSTRefresh();
 
         // Market hours (update every minute)
         this._updateMarketHours();
@@ -438,6 +443,35 @@ class PriceApp {
         });
     }
 
+    // --- Schedule-based Refresh for KST 08:00 ---
+    _scheduleKSTRefresh() {
+        // Critical refresh times (KST hours)
+        const KST_REFRESH_HOURS = [8]; // 08:00 KST - today_open update
+        const KST_REFRESH_MINUTES = [0, 5, 10, 15]; // Retry at :00, :05, :10, :15
+
+        const checkAndRefresh = () => {
+            const now = new Date();
+            // Convert to KST (UTC+9)
+            const kst = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+            const hour = kst.getHours();
+            const minute = kst.getMinutes();
+
+            // Check if we're at a critical refresh time
+            if (KST_REFRESH_HOURS.includes(hour) && KST_REFRESH_MINUTES.includes(minute)) {
+                console.log(`[KST Refresh] Triggered at KST ${hour}:${String(minute).padStart(2, '0')}`);
+                this._loadReferencePrices();
+                this._loadLondonFix();
+                this._loadInitialRate();
+            }
+        };
+
+        // Check every minute
+        this._kstRefreshTimer = setInterval(checkAndRefresh, 60000);
+
+        // Also check immediately on load
+        checkAndRefresh();
+    }
+
     // --- Burn-in Prevention ---
     _startBurnInPrevention() {
         const container = document.querySelector('.main-container');
@@ -589,6 +623,7 @@ class PriceApp {
         if (this.burnInTimer) clearInterval(this.burnInTimer);
         if (this._dailyRefreshTimer) clearInterval(this._dailyRefreshTimer);
         if (this._marketHoursTimer) clearInterval(this._marketHoursTimer);
+        if (this._kstRefreshTimer) clearInterval(this._kstRefreshTimer);
     }
 }
 
