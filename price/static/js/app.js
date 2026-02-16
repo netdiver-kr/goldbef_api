@@ -108,6 +108,9 @@ class PriceApp {
         // KST = UTC+9, so 08:00 KST = 23:00 UTC previous day
         this._scheduleKSTRefresh();
 
+        // Page Visibility API: refresh data when tab becomes visible after being hidden
+        this._setupVisibilityRefresh();
+
         // Market hours (update every minute)
         this._updateMarketHours();
         this._marketHoursTimer = setInterval(() => this._updateMarketHours(), 60000);
@@ -470,6 +473,29 @@ class PriceApp {
 
         // Also check immediately on load
         checkAndRefresh();
+    }
+
+    // --- Page Visibility Refresh (for mobile background tabs) ---
+    _setupVisibilityRefresh() {
+        this._lastVisibleTime = Date.now();
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                const now = Date.now();
+                const elapsed = now - this._lastVisibleTime;
+
+                // If tab was hidden for more than 5 minutes, refresh all data
+                if (elapsed > 5 * 60 * 1000) {
+                    console.log(`[Visibility] Tab visible after ${Math.round(elapsed / 60000)}min, refreshing data`);
+                    this._loadReferencePrices();
+                    this._loadLondonFix();
+                    this._loadInitialRate();
+                    this._loadInitialPrices();
+                }
+
+                this._lastVisibleTime = now;
+            }
+        });
     }
 
     // --- Burn-in Prevention ---
