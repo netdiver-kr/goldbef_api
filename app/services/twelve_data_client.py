@@ -23,7 +23,9 @@ class TwelveDataClient:
         'silver': 'XAG/USD',
         'platinum': 'XPT/USD',
         'palladium': 'XPD/USD',
-        'usd_krw': 'USD/KRW'
+        'usd_krw': 'USD/KRW',
+        'btc_usd': 'BTC/USD',
+        'usd_jpy': 'USD/JPY',
     }
 
     def __init__(self, api_key: str, callback: Optional[Callable] = None):

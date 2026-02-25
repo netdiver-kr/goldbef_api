@@ -232,20 +232,6 @@ class KRWGrid {
         if (prev !== formatted) {
             td.textContent = formatted;
             this.prevValues[cellKey] = formatted;
-
-            // Batch class toggle via requestAnimationFrame to avoid per-cell forced reflow
-            if (!this._pendingCells) {
-                this._pendingCells = [];
-                requestAnimationFrame(() => {
-                    const cells = this._pendingCells;
-                    this._pendingCells = null;
-                    cells.forEach(c => c.classList.remove('grid-cell-updated'));
-                    // Single reflow for entire batch
-                    document.body.offsetHeight;
-                    cells.forEach(c => c.classList.add('grid-cell-updated'));
-                });
-            }
-            this._pendingCells.push(td);
         }
     }
 }

@@ -142,16 +142,26 @@ class PriceRepository:
         if provider:
             open_filters.append(PriceRecord.provider == provider)
 
+        # Find earliest timestamp per asset, then get that record
         open_subq = (
             select(
                 PriceRecord.asset_type,
-                func.min(PriceRecord.id).label('min_id')
+                func.min(PriceRecord.timestamp).label('min_ts')
             )
             .where(and_(*open_filters))
             .group_by(PriceRecord.asset_type)
             .subquery()
         )
-        open_q = select(PriceRecord).join(open_subq, PriceRecord.id == open_subq.c.min_id)
+        open_q = select(PriceRecord).join(
+            open_subq,
+            and_(
+                PriceRecord.asset_type == open_subq.c.asset_type,
+                PriceRecord.timestamp == open_subq.c.min_ts
+            )
+        )
+        # Apply same filters to main query to ensure provider filter works
+        if provider:
+            open_q = open_q.where(PriceRecord.provider == provider)
         open_res = await self.session.execute(open_q)
         for rec in open_res.scalars().all():
             result[rec.asset_type]['today_open'] = float(rec.price)
@@ -165,16 +175,25 @@ class PriceRepository:
         if provider:
             lse_filters.append(PriceRecord.provider == provider)
 
+        # Find latest timestamp per asset within LSE close window
         lse_subq = (
             select(
                 PriceRecord.asset_type,
-                func.max(PriceRecord.id).label('max_id')
+                func.max(PriceRecord.timestamp).label('max_ts')
             )
             .where(and_(*lse_filters))
             .group_by(PriceRecord.asset_type)
             .subquery()
         )
-        lse_q = select(PriceRecord).join(lse_subq, PriceRecord.id == lse_subq.c.max_id)
+        lse_q = select(PriceRecord).join(
+            lse_subq,
+            and_(
+                PriceRecord.asset_type == lse_subq.c.asset_type,
+                PriceRecord.timestamp == lse_subq.c.max_ts
+            )
+        )
+        if provider:
+            lse_q = lse_q.where(PriceRecord.provider == provider)
         lse_res = await self.session.execute(lse_q)
         for rec in lse_res.scalars().all():
             result[rec.asset_type]['lse_close'] = float(rec.price)
@@ -188,16 +207,25 @@ class PriceRepository:
         if provider:
             nyse_filters.append(PriceRecord.provider == provider)
 
+        # Find latest timestamp per asset within NYSE close window
         nyse_subq = (
             select(
                 PriceRecord.asset_type,
-                func.max(PriceRecord.id).label('max_id')
+                func.max(PriceRecord.timestamp).label('max_ts')
             )
             .where(and_(*nyse_filters))
             .group_by(PriceRecord.asset_type)
             .subquery()
         )
-        nyse_q = select(PriceRecord).join(nyse_subq, PriceRecord.id == nyse_subq.c.max_id)
+        nyse_q = select(PriceRecord).join(
+            nyse_subq,
+            and_(
+                PriceRecord.asset_type == nyse_subq.c.asset_type,
+                PriceRecord.timestamp == nyse_subq.c.max_ts
+            )
+        )
+        if provider:
+            nyse_q = nyse_q.where(PriceRecord.provider == provider)
         nyse_res = await self.session.execute(nyse_q)
         for rec in nyse_res.scalars().all():
             result[rec.asset_type]['nyse_close'] = float(rec.price)

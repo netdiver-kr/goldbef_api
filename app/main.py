@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
 
                 # Warmup latest-all cache
                 providers = ['eodhd', 'twelve_data', 'massive']
-                assets_list = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'jpy_krw', 'cny_krw', 'eur_krw']
+                assets_list = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'jpy_krw', 'cny_krw', 'eur_krw', 'btc_usd', 'usd_jpy']
                 results = []
                 for provider in providers:
                     for asset in assets_list:

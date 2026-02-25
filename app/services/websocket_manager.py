@@ -2,6 +2,7 @@ import asyncio
 from typing import List, Dict, Any
 from datetime import datetime, timezone, timedelta
 from app.services.eodhd_ws_client import EODHDWebSocketClient
+from app.services.eodhd_crypto_ws_client import EODHDCryptoWebSocketClient
 from app.services.twelve_data_client import TwelveDataClient
 from app.services.naugold_client import NaugoldClient
 from app.services.data_processor import DataProcessor
@@ -20,12 +21,16 @@ class WebSocketManager:
         self.settings = settings
         self.data_processor = DataProcessor()
 
-        # WebSocket client (EODHD only) - uses buffered handler
+        # WebSocket clients (EODHD forex + crypto) - uses buffered handler
         self.ws_clients = [
             EODHDWebSocketClient(
                 api_key=settings.EODHD_API_KEY,
                 on_message=self._handle_eodhd_message
-            )
+            ),
+            EODHDCryptoWebSocketClient(
+                api_key=settings.EODHD_API_KEY,
+                on_message=self._handle_eodhd_message
+            ),
         ]
 
         # HTTP polling clients
