@@ -1,6 +1,6 @@
 /**
  * KRW Conversion Grid - NauGold Style
- * Percentages as columns, 1g/3.75g as rows
+ * Percentages as columns, 1g as rows
  * Sub-tables: 현재환율 (live rate), 최초고시 (initial rate)
  */
 class KRWGrid {
@@ -118,7 +118,6 @@ class KRWGrid {
     }
 
     _buildSubSection(tbody, metalKey, prefix, rateType, pcts) {
-        // Row 1: per-gram (1g)
         const row1g = document.createElement('tr');
         const td1gLabel = document.createElement('td');
         td1gLabel.className = 'grid-label-col';
@@ -133,22 +132,6 @@ class KRWGrid {
             row1g.appendChild(td);
         });
         tbody.appendChild(row1g);
-
-        // Row 2: per-돈 (3.75g)
-        const row375 = document.createElement('tr');
-        const td375Label = document.createElement('td');
-        td375Label.className = 'grid-label-col';
-        td375Label.innerHTML = `<small>${prefix}</small> 3.75g`;
-        row375.appendChild(td375Label);
-
-        pcts.forEach(pct => {
-            const td = document.createElement('td');
-            td.textContent = '--';
-            const cellKey = `${metalKey}_${rateType}_375g_${pct}`;
-            this.cells[cellKey] = td;
-            row375.appendChild(td);
-        });
-        tbody.appendChild(row375);
     }
 
     setMetalPrice(metalKey, priceUSD) {
@@ -215,10 +198,7 @@ class KRWGrid {
     _calcSection(metalKey, rateType, priceUSD, rate, pcts) {
         pcts.forEach(pct => {
             const krwPerGram = (priceUSD * (pct / 100) * rate) / KRWGrid.TROY_OUNCE_GRAMS;
-            const krwPer375 = krwPerGram * 3.75;
-
             this._updateCell(`${metalKey}_${rateType}_1g_${pct}`, Math.round(krwPerGram));
-            this._updateCell(`${metalKey}_${rateType}_375g_${pct}`, Math.round(krwPer375));
         });
     }
 

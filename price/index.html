@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EurasiaMetal - 실시간 귀금속 시세</title>
     <link rel="preconnect" href="/api" crossorigin>
-    <link rel="preload" href="static/css/style.css?v=20260213b" as="style">
-    <link rel="preload" href="static/js/app.js?v=20260213b" as="script">
-    <link rel="stylesheet" href="static/css/style.css?v=20260213b">
+    <link rel="preload" href="static/css/style.css?v=20260302a" as="style">
+    <link rel="preload" href="static/js/app.js?v=20260302a" as="script">
+    <link rel="stylesheet" href="static/css/style.css?v=20260302a">
 </head>
 <body>
     <!-- Header -->
@@ -107,7 +107,23 @@
             </div>
         </section>
 
-        <!-- Section 2: KRW Conversion Grids -->
+        <!-- Section 2: TradingView Charts -->
+        <section class="chart-section">
+            <div class="chart-container">
+                <div class="chart-title">GOLD (XAU/USD)</div>
+                <div class="tradingview-widget-container">
+                    <div id="tradingview_gold"></div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">SILVER (XAG/USD)</div>
+                <div class="tradingview-widget-container">
+                    <div id="tradingview_silver"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: KRW Conversion Grids -->
         <div id="grid-container"></div>
 
         <!-- Section 3: Bottom Info -->
@@ -283,10 +299,11 @@
         </div>
     </aside>
 
-    <script src="static/js/settings.js?v=20260213b"></script>
-    <script src="static/js/rolling.js?v=20260213b"></script>
-    <script src="static/js/grid.js?v=20260213b"></script>
-    <script src="static/js/app.js?v=20260213b"></script>
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <script src="static/js/settings.js?v=20260302a"></script>
+    <script src="static/js/rolling.js?v=20260302a"></script>
+    <script src="static/js/grid.js?v=20260302a"></script>
+    <script src="static/js/app.js?v=20260302a"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/price/sw.js').catch(() => {});

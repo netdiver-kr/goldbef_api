@@ -66,6 +66,9 @@ class PriceApp {
             this._applyReferencePrices();
             this._updateRefPricePanel();
         });
+        this.settings.on('theme', () => {
+            this._initCharts();
+        });
 
         // Theme toggle button
         const themeBtn = document.getElementById('btn-theme');
@@ -114,6 +117,9 @@ class PriceApp {
         // Market hours (update every minute)
         this._updateMarketHours();
         this._marketHoursTimer = setInterval(() => this._updateMarketHours(), 60000);
+
+        // Initialize TradingView charts
+        this._initCharts();
     }
 
     // --- SSE Connection ---
@@ -416,6 +422,60 @@ class PriceApp {
                 timeEl.textContent = `${hh}:${mm}`;
             }
         });
+    }
+
+    // --- TradingView Charts ---
+    _initCharts() {
+        if (typeof TradingView === 'undefined') {
+            console.warn('TradingView library not loaded');
+            return;
+        }
+
+        const theme = this.settings.getTheme();
+        const chartTheme = theme === 'dark' ? 'dark' : 'light';
+
+        const goldContainer = document.getElementById('tradingview_gold');
+        const silverContainer = document.getElementById('tradingview_silver');
+        if (goldContainer) goldContainer.innerHTML = '';
+        if (silverContainer) silverContainer.innerHTML = '';
+
+        if (goldContainer) {
+            new TradingView.widget({
+                "symbol": "OANDA:XAUUSD",
+                "interval": "1",
+                "timezone": "Asia/Seoul",
+                "theme": chartTheme,
+                "style": "1",
+                "locale": "kr",
+                "enable_publishing": false,
+                "hide_side_toolbar": true,
+                "hide_top_toolbar": false,
+                "allow_symbol_change": false,
+                "save_image": false,
+                "container_id": "tradingview_gold",
+                "width": "100%",
+                "height": "240"
+            });
+        }
+
+        if (silverContainer) {
+            new TradingView.widget({
+                "symbol": "OANDA:XAGUSD",
+                "interval": "1",
+                "timezone": "Asia/Seoul",
+                "theme": chartTheme,
+                "style": "1",
+                "locale": "kr",
+                "enable_publishing": false,
+                "hide_side_toolbar": true,
+                "hide_top_toolbar": false,
+                "allow_symbol_change": false,
+                "save_image": false,
+                "container_id": "tradingview_silver",
+                "width": "100%",
+                "height": "240"
+            });
+        }
     }
 
     // --- Reference Price Display ---

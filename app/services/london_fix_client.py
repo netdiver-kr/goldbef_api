@@ -17,11 +17,15 @@ Schedule (2 slots per UK business day):
 """
 
 import asyncio
+import json
+import os
 import aiohttp
 from typing import Dict, Optional, Set, Tuple
 from datetime import datetime, timezone, timedelta, date
 from app.config import get_settings
 from app.utils.logger import app_logger as logger
+
+CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'london_fix_cache.json')
 
 
 KST = timezone(timedelta(hours=9))
@@ -87,9 +91,33 @@ class LondonFixClient:
         self._last_slot_utc: Optional[datetime] = None
         self._fetched_london_dates: Set[str] = set()  # e.g. {"2026-02-02"}
 
+        # Load persisted cache on init
+        self._load_cache_file()
+
     @property
     def cached_data(self) -> Dict:
         return dict(self._cache)
+
+    def _load_cache_file(self):
+        """Load London Fix cache from file (survives restarts)."""
+        try:
+            if os.path.exists(CACHE_FILE):
+                with open(CACHE_FILE, 'r') as f:
+                    saved = json.load(f)
+                # Only restore if data exists
+                if saved.get('gold_am') is not None:
+                    self._cache.update(saved)
+                    logger.info(f"[LondonFix] Loaded cached data from file (date: {saved.get('date')})")
+        except Exception as e:
+            logger.warning(f"[LondonFix] Failed to load cache file: {e}")
+
+    def _save_cache_file(self):
+        """Persist London Fix cache to file."""
+        try:
+            with open(CACHE_FILE, 'w') as f:
+                json.dump(self._cache, f, indent=2)
+        except Exception as e:
+            logger.warning(f"[LondonFix] Failed to save cache file: {e}")
 
     @staticmethod
     def _is_business_day(d: date) -> bool:
@@ -298,6 +326,7 @@ class LondonFixClient:
                 f"Pt AM={self._cache['platinum_am']} PM={self._cache['platinum_pm']}, "
                 f"Pd AM={self._cache['palladium_am']} PM={self._cache['palladium_pm']}"
             )
+            self._save_cache_file()
 
         return updated
 

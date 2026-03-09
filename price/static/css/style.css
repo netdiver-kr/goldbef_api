@@ -268,6 +268,45 @@ body {
     font-weight: 500;
 }
 
+/* --- TradingView Charts --- */
+.chart-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.chart-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.chart-title {
+    font-size: 17px;
+    font-weight: 600;
+    padding: 8px 12px;
+    background: var(--grid-header-bg);
+    color: var(--grid-header-fg);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.tradingview-widget-container {
+    height: 240px;
+}
+
+.tradingview-widget-container > div {
+    height: 100% !important;
+}
+
+@media (max-width: 900px) {
+    .chart-section {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* --- KRW Grid Section --- */
 #grid-container {
     display: flex;
