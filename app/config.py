@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     MSSQL_SERVER: str = "(local)\\SQLEXPRESS"
     MSSQL_DATABASE: str = "goldbef"
     MSSQL_TRUSTED_CONNECTION: str = "yes"
+    MSSQL_WRITE_ENABLED: bool = True  # EODHD → MSSQL td_price_api write
 
     # Data Processing
     PRICE_UPDATE_INTERVAL: float = 3.0  # seconds (3-second averaging)

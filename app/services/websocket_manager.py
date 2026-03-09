@@ -6,6 +6,7 @@ from app.services.eodhd_crypto_ws_client import EODHDCryptoWebSocketClient
 from app.services.twelve_data_client import TwelveDataClient
 from app.services.naugold_client import NaugoldClient
 from app.services.data_processor import DataProcessor
+from app.services.eodhd_mssql_writer import EODHDMSSQLWriter
 from app.config import get_settings
 from app.utils.logger import app_logger as logger
 
@@ -55,6 +56,9 @@ class WebSocketManager:
         # Massive data buffer for averaging (3 second intervals)
         self.massive_buffer: Dict[str, List[Dict[str, Any]]] = {}
         self.massive_flush_task = None
+
+        # EODHD → MSSQL writer (for goldbef.com mobile app)
+        self.mssql_writer = EODHDMSSQLWriter() if settings.MSSQL_WRITE_ENABLED else None
 
     async def _handle_eodhd_message(self, data: Dict[str, Any]):
         """
@@ -134,6 +138,13 @@ class WebSocketManager:
                 # Batch save all averaged data in single transaction
                 if batch:
                     await self.data_processor.save_prices_batch(batch)
+
+                    # Also write to MSSQL td_price_api for goldbef.com mobile app
+                    if self.mssql_writer:
+                        try:
+                            await self.mssql_writer.write_batch(batch)
+                        except Exception as e:
+                            logger.error(f"[EODHD-MSSQL] Write error: {e}")
 
             except asyncio.CancelledError:
                 break
@@ -296,6 +307,10 @@ class WebSocketManager:
         massive_task = self.massive_client.stop()
 
         await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, return_exceptions=True)
+
+        # Close MSSQL writer connection
+        if self.mssql_writer:
+            self.mssql_writer.close()
 
     def add_sse_client(self, queue: asyncio.Queue):
         """Register a new SSE client"""
