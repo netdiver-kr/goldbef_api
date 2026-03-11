@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional
 from datetime import datetime, timedelta, date
+from zoneinfo import ZoneInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db_session
 from app.database.repository import PriceRepository
@@ -243,17 +244,27 @@ def _prev_business_day(d: date) -> date:
     return d
 
 
-def _most_recent_close_time(now_utc: datetime, close_hour: int, close_minute: int) -> datetime:
-    """Find the most recent market close time (UTC) before now."""
-    today = now_utc.date()
-    close_today = datetime(today.year, today.month, today.day, close_hour, close_minute)
+def _most_recent_close_time_tz(now_utc: datetime, close_hour: int, close_minute: int, tz: ZoneInfo) -> datetime:
+    """Find the most recent market close time (as naive UTC) using DST-aware timezone.
 
-    if now_utc >= close_today and today.weekday() < 5:
-        d = today
+    close_hour/close_minute are in the market's local time (e.g., 16:30 London).
+    Returns the equivalent naive UTC datetime for the most recent business day close.
+    """
+    # Convert current UTC to market local time
+    now_local = now_utc.replace(tzinfo=ZoneInfo('UTC')).astimezone(tz)
+    today_local = now_local.date()
+
+    from datetime import time as dt_time
+    close_local = datetime.combine(today_local, dt_time(close_hour, close_minute), tzinfo=tz)
+
+    if now_local >= close_local and today_local.weekday() < 5:
+        d = today_local
     else:
-        d = _prev_business_day(today if today.weekday() < 5 else today)
+        d = _prev_business_day(today_local if today_local.weekday() < 5 else today_local)
 
-    return datetime(d.year, d.month, d.day, close_hour, close_minute)
+    close_dt = datetime.combine(d, dt_time(close_hour, close_minute), tzinfo=tz)
+    # Convert to naive UTC for database queries
+    return close_dt.astimezone(ZoneInfo('UTC')).replace(tzinfo=None)
 
 
 _ref_price_cache = {}  # { provider_key: {'data': ..., 'expires': ...} }
@@ -267,8 +278,9 @@ async def get_reference_prices(
     """
     Get reference prices for change calculation.
 
-    Returns today's open, previous LSE close (16:30 UTC), and previous NYSE close (22:00 UTC)
-    for each asset. When provider is specified, only that provider's records are used.
+    Returns today's open, previous LSE close (16:30 London time), and previous NYSE close (16:00 New York time)
+    for each asset. DST-aware via zoneinfo.
+    When provider is specified, only that provider's records are used.
     Uses per-provider 60-second cache.
     """
     import time
@@ -291,10 +303,10 @@ async def get_reference_prices(
 
     today_start_utc = datetime(kst_date.year, kst_date.month, kst_date.day, 8, 0) - timedelta(hours=9)
 
-    lse_close = _most_recent_close_time(now_utc, 16, 30)
+    lse_close = _most_recent_close_time_tz(now_utc, 16, 30, ZoneInfo('Europe/London'))
     lse_search_start = datetime(lse_close.year, lse_close.month, lse_close.day, 0, 0)
 
-    nyse_close = _most_recent_close_time(now_utc, 22, 0)
+    nyse_close = _most_recent_close_time_tz(now_utc, 16, 0, ZoneInfo('America/New_York'))
     nyse_search_start = datetime(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
 
     assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw', 'btc_usd', 'usd_jpy']

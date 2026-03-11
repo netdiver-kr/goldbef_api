@@ -14,6 +14,7 @@ from app.services.london_fix_client import get_london_fix_client
 from app.services.smbs_client import get_smbs_client
 from app.routers import api, sse
 from app.utils.logger import app_logger as logger
+from zoneinfo import ZoneInfo
 
 
 @asynccontextmanager
@@ -99,9 +100,9 @@ async def lifespan(app: FastAPI):
                 now_utc = dt.utcnow()
                 kst_today = (now_utc + td(hours=9)).date()
                 today_start_utc = dt(kst_today.year, kst_today.month, kst_today.day, 8, 0) - td(hours=9)
-                lse_close = api._most_recent_close_time(now_utc, 16, 30)
+                lse_close = api._most_recent_close_time_tz(now_utc, 16, 30, ZoneInfo('Europe/London'))
                 lse_search_start = dt(lse_close.year, lse_close.month, lse_close.day, 0, 0)
-                nyse_close = api._most_recent_close_time(now_utc, 22, 0)
+                nyse_close = api._most_recent_close_time_tz(now_utc, 16, 0, ZoneInfo('America/New_York'))
                 nyse_search_start = dt(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
                 ref_assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw']
                 ref_result = await repo.get_reference_prices_bulk(
