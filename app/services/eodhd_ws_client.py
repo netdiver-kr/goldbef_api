@@ -27,6 +27,9 @@ class EODHDWebSocketClient(BaseWebSocketClient):
         'palladium': 'XPDUSD',    # Palladium spot price vs USD
         'usd_krw': 'USDKRW',      # USD to KRW exchange rate
         'usd_jpy': 'USDJPY',      # USD to JPY exchange rate
+        'usd_cny': 'USDCNY',      # USD to CNY exchange rate
+        'eur_usd': 'EURUSD',      # EUR to USD exchange rate
+        'brent_oil': 'XBRUSD',    # Brent crude oil spot vs USD
     }
 
     @property

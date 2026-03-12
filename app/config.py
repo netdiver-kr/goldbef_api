@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     WS_MAX_RECONNECT_DELAY: int = 60  # seconds
     WS_MESSAGE_TIMEOUT: int = 60  # seconds
 
+    # EODHD Real-Time REST polling (indices/commodities)
+    EODHD_REALTIME_INTERVAL: float = 300.0  # 5 minutes
+
     # SSE Configuration
     SSE_QUEUE_SIZE: int = 100
     SSE_HEARTBEAT_INTERVAL: int = 30  # seconds

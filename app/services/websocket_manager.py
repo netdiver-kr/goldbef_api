@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from datetime import datetime, timezone, timedelta
 from app.services.eodhd_ws_client import EODHDWebSocketClient
 from app.services.eodhd_crypto_ws_client import EODHDCryptoWebSocketClient
+from app.services.eodhd_realtime_client import EODHDRealtimeClient
 from app.services.twelve_data_client import TwelveDataClient
 from app.services.naugold_client import NaugoldClient
 from app.services.data_processor import DataProcessor
@@ -43,6 +44,13 @@ class WebSocketManager:
         # NauGold HTTP polling client (replaces Massive MSSQL)
         self.massive_client = NaugoldClient(
             on_message=self._handle_massive_message
+        )
+
+        # EODHD Real-Time REST polling (indices/commodities)
+        self.eodhd_realtime_client = EODHDRealtimeClient(
+            api_key=settings.EODHD_API_KEY,
+            callback=self._handle_message,
+            poll_interval=settings.EODHD_REALTIME_INTERVAL,
         )
 
         # SSE broadcast queues
@@ -275,9 +283,10 @@ class WebSocketManager:
         # Add HTTP polling client tasks
         twelve_data_task = self.twelve_data_client.start()
         massive_task = self.massive_client.start()
+        eodhd_realtime_task = self.eodhd_realtime_client.start()
 
         # Run all clients concurrently
-        await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, return_exceptions=True)
+        await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, eodhd_realtime_task, return_exceptions=True)
 
     async def stop(self):
         """Stop all data clients"""
@@ -305,8 +314,9 @@ class WebSocketManager:
         # Stop HTTP polling clients
         twelve_data_task = self.twelve_data_client.stop()
         massive_task = self.massive_client.stop()
+        eodhd_realtime_task = self.eodhd_realtime_client.stop()
 
-        await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, return_exceptions=True)
+        await asyncio.gather(*ws_tasks, twelve_data_task, massive_task, eodhd_realtime_task, return_exceptions=True)
 
         # Close MSSQL writer connection
         if self.mssql_writer:
@@ -332,6 +342,7 @@ class WebSocketManager:
         # HTTP polling clients
         status['twelve_data'] = self.twelve_data_client.is_connected()
         status['massive'] = self.massive_client.running
+        status['eodhd_realtime'] = self.eodhd_realtime_client.is_connected()
         return status
 
 

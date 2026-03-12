@@ -15,6 +15,7 @@ class EODHDCryptoWebSocketClient(BaseWebSocketClient):
 
     SYMBOL_MAPPING = {
         'btc_usd': 'BTC-USD',
+        'eth_usd': 'ETH-USD',     # Ethereum vs USD
     }
 
     @property

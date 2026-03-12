@@ -135,6 +135,8 @@ class PriceRepository:
             result[asset] = {'today_open': None, 'lse_close': None, 'nyse_close': None}
 
         # 1) Today's open: first record after today_start_utc per asset
+        #    Use timestamp first; fall back to created_at for REST-polled data
+        #    where timestamp reflects last trade time (may be yesterday)
         open_filters = [
             PriceRecord.asset_type.in_(assets),
             PriceRecord.timestamp >= today_start_utc,
@@ -142,7 +144,6 @@ class PriceRepository:
         if provider:
             open_filters.append(PriceRecord.provider == provider)
 
-        # Find earliest timestamp per asset, then get that record
         open_subq = (
             select(
                 PriceRecord.asset_type,
@@ -159,12 +160,45 @@ class PriceRepository:
                 PriceRecord.timestamp == open_subq.c.min_ts
             )
         )
-        # Apply same filters to main query to ensure provider filter works
         if provider:
             open_q = open_q.where(PriceRecord.provider == provider)
         open_res = await self.session.execute(open_q)
+        found_assets = set()
         for rec in open_res.scalars().all():
             result[rec.asset_type]['today_open'] = float(rec.price)
+            found_assets.add(rec.asset_type)
+
+        # Fallback: for assets with no timestamp-based match, try created_at
+        # This handles REST-polled data where timestamp is stale (last trade time)
+        missing = [a for a in assets if a not in found_assets]
+        if missing:
+            fb_filters = [
+                PriceRecord.asset_type.in_(missing),
+                PriceRecord.created_at >= today_start_utc,
+            ]
+            if provider:
+                fb_filters.append(PriceRecord.provider == provider)
+            fb_subq = (
+                select(
+                    PriceRecord.asset_type,
+                    func.min(PriceRecord.created_at).label('min_ca')
+                )
+                .where(and_(*fb_filters))
+                .group_by(PriceRecord.asset_type)
+                .subquery()
+            )
+            fb_q = select(PriceRecord).join(
+                fb_subq,
+                and_(
+                    PriceRecord.asset_type == fb_subq.c.asset_type,
+                    PriceRecord.created_at == fb_subq.c.min_ca
+                )
+            )
+            if provider:
+                fb_q = fb_q.where(PriceRecord.provider == provider)
+            fb_res = await self.session.execute(fb_q)
+            for rec in fb_res.scalars().all():
+                result[rec.asset_type]['today_open'] = float(rec.price)
 
         # 2) LSE close: last record in [lse_search_start, lse_close] per asset
         lse_filters = [

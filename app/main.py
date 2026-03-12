@@ -78,7 +78,12 @@ async def lifespan(app: FastAPI):
 
                 # Warmup latest-all cache
                 providers = ['eodhd', 'twelve_data', 'massive']
-                assets_list = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'jpy_krw', 'cny_krw', 'eur_krw', 'btc_usd', 'usd_jpy']
+                assets_list = [
+                    'gold', 'silver', 'usd_krw', 'platinum', 'palladium',
+                    'jpy_krw', 'cny_krw', 'eur_krw', 'btc_usd', 'usd_jpy',
+                    'usd_cny', 'eur_usd', 'eth_usd', 'copper',
+                    'brent_oil', 'kospi', 'kosdaq', 'dxy', 'sp500', 'vix',
+                ]
                 results = []
                 for provider in providers:
                     for asset in assets_list:
@@ -104,7 +109,11 @@ async def lifespan(app: FastAPI):
                 lse_search_start = dt(lse_close.year, lse_close.month, lse_close.day, 0, 0)
                 nyse_close = api._most_recent_close_time_tz(now_utc, 16, 0, ZoneInfo('America/New_York'))
                 nyse_search_start = dt(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
-                ref_assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw']
+                ref_assets = [
+                    'gold', 'silver', 'platinum', 'palladium', 'usd_krw', 'btc_usd', 'usd_jpy',
+                    'usd_cny', 'eur_usd', 'eth_usd', 'copper',
+                    'brent_oil', 'kospi', 'kosdaq', 'dxy', 'sp500', 'vix',
+                ]
                 ref_result = await repo.get_reference_prices_bulk(
                     assets=ref_assets,
                     today_start_utc=today_start_utc,

@@ -98,7 +98,11 @@ async def get_statistics(
     """
     try:
         # Validate asset type
-        valid_assets = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'btc_usd', 'usd_jpy']
+        valid_assets = [
+            'gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'btc_usd', 'usd_jpy',
+            'usd_cny', 'eur_usd', 'eth_usd', 'copper',
+            'brent_oil', 'kospi', 'kosdaq', 'dxy', 'sp500', 'vix',
+        ]
         if asset not in valid_assets:
             raise HTTPException(
                 status_code=400,
@@ -142,7 +146,12 @@ async def get_all_latest_prices(
         repository = PriceRepository(session)
 
         providers = ['eodhd', 'twelve_data', 'massive']
-        assets = ['gold', 'silver', 'usd_krw', 'platinum', 'palladium', 'jpy_krw', 'cny_krw', 'eur_krw', 'btc_usd', 'usd_jpy']
+        assets = [
+            'gold', 'silver', 'usd_krw', 'platinum', 'palladium',
+            'jpy_krw', 'cny_krw', 'eur_krw', 'btc_usd', 'usd_jpy',
+            'usd_cny', 'eur_usd', 'eth_usd', 'copper',
+            'brent_oil', 'kospi', 'kosdaq', 'dxy', 'sp500', 'vix',
+        ]
 
         results = []
         for provider in providers:
@@ -309,7 +318,11 @@ async def get_reference_prices(
     nyse_close = _most_recent_close_time_tz(now_utc, 16, 0, ZoneInfo('America/New_York'))
     nyse_search_start = datetime(nyse_close.year, nyse_close.month, nyse_close.day, 0, 0)
 
-    assets = ['gold', 'silver', 'platinum', 'palladium', 'usd_krw', 'btc_usd', 'usd_jpy']
+    assets = [
+        'gold', 'silver', 'platinum', 'palladium', 'usd_krw', 'btc_usd', 'usd_jpy',
+        'usd_cny', 'eur_usd', 'eth_usd', 'copper',
+        'brent_oil', 'kospi', 'kosdaq', 'dxy', 'sp500', 'vix', 'natural_gas',
+    ]
 
     result = await repository.get_reference_prices_bulk(
         assets=assets,
