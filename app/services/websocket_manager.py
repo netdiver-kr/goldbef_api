@@ -253,6 +253,14 @@ class WebSocketManager:
             'timestamp': timestamp_str
         }
 
+        # Include change/change_p from metadata (EODHD REST-polled assets)
+        metadata = data.get('metadata')
+        if metadata:
+            if 'change' in metadata:
+                broadcast_data['change'] = float(metadata['change'])
+            if 'change_p' in metadata:
+                broadcast_data['change_p'] = float(metadata['change_p'])
+
         # Send to all queues
         for queue in self.broadcast_queues[:]:  # Copy list to avoid modification during iteration
             try:
