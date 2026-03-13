@@ -12,6 +12,8 @@ from app.database.repository import PriceRepository
 from app.services.websocket_manager import get_ws_manager
 from app.services.london_fix_client import get_london_fix_client
 from app.services.smbs_client import get_smbs_client
+from app.services.korean_news_client import get_korean_news_client
+from app.services.eodhd_events_client import get_eodhd_events_client
 from app.routers import api, sse
 from app.utils.logger import app_logger as logger
 from zoneinfo import ZoneInfo
@@ -38,6 +40,14 @@ async def lifespan(app: FastAPI):
     # Start SMBS exchange rate client in background
     smbs = get_smbs_client()
     asyncio.create_task(smbs.start())
+
+    # Start Korean News scraper in background (einfomax + naver)
+    news_client = get_korean_news_client()
+    asyncio.create_task(news_client.start())
+
+    # Start EODHD Economic Events client in background
+    events_client = get_eodhd_events_client()
+    asyncio.create_task(events_client.start())
 
     # Run initial DB cleanup on startup, then every 6 hours
     async def _db_cleanup_loop():
@@ -150,6 +160,12 @@ async def lifespan(app: FastAPI):
 
     # Stop SMBS client
     await smbs.stop()
+
+    # Stop News client
+    await news_client.stop()
+
+    # Stop Events client
+    await events_client.stop()
 
     # Close database connection
     await db.close_db()

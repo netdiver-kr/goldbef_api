@@ -266,6 +266,29 @@ class PriceRepository:
 
         return result
 
+    async def get_price_series(
+        self,
+        asset_type: str,
+        hours: int = 24,
+        provider: str = None,
+    ) -> list:
+        """Get (timestamp, price) pairs for an asset over the last N hours, ordered ASC."""
+        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        conditions = [
+            PriceRecord.asset_type == asset_type,
+            PriceRecord.timestamp >= cutoff,
+        ]
+        if provider:
+            conditions.append(PriceRecord.provider == provider)
+
+        query = (
+            select(PriceRecord.timestamp, PriceRecord.price)
+            .where(and_(*conditions))
+            .order_by(PriceRecord.timestamp)
+        )
+        result = await self.session.execute(query)
+        return [(row[0], float(row[1])) for row in result.all()]
+
     async def get_latest_by_provider_and_asset(
         self,
         provider: str,

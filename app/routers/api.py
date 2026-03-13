@@ -8,6 +8,8 @@ from app.database.repository import PriceRepository
 from app.models.price_data import HistoryResponse, PriceRecordResponse, StatisticsResponse
 from app.services.london_fix_client import get_london_fix_client
 from app.services.smbs_client import get_smbs_client
+from app.services.korean_news_client import get_korean_news_client
+from app.services.eodhd_events_client import get_eodhd_events_client
 from app.utils.logger import app_logger as logger
 
 router = APIRouter()
@@ -337,3 +339,67 @@ async def get_reference_prices(
     _ref_price_cache[cache_key] = {'data': result, 'expires': now_ts + 60}
 
     return result
+
+
+# --- Chart Data ---
+
+_chart_data_cache = {}  # { cache_key: {'data': ..., 'expires': ...} }
+
+
+def _downsample(series: list, target_points: int) -> list:
+    """Downsample a list to target_points using nth-sample."""
+    if len(series) <= target_points:
+        return series
+    step = len(series) / target_points
+    return [series[int(i * step)] for i in range(target_points)]
+
+
+@router.get("/price-chart-data")
+async def get_price_chart_data(
+    assets: str = Query(..., description="Comma-separated asset types"),
+    hours: int = Query(24, ge=1, le=72, description="Hours of history"),
+    points: int = Query(100, ge=20, le=500, description="Target data points"),
+    provider: Optional[str] = Query(None, description="Filter by provider"),
+    session: AsyncSession = Depends(get_db_session)
+):
+    """Get downsampled price data for chart rendering. Cached for 60 seconds."""
+    import time
+    now_ts = time.time()
+
+    cache_key = f"{assets}_{hours}_{points}_{provider}"
+    cached = _chart_data_cache.get(cache_key)
+    if cached and now_ts < cached['expires']:
+        return cached['data']
+
+    asset_list = [a.strip() for a in assets.split(',') if a.strip()]
+    repository = PriceRepository(session)
+
+    result = {}
+    for asset in asset_list:
+        series = await repository.get_price_series(asset, hours, provider)
+        sampled = _downsample(series, points)
+        result[asset] = [
+            {"t": ts.isoformat(), "p": price}
+            for ts, price in sampled
+        ]
+
+    _chart_data_cache[cache_key] = {'data': result, 'expires': now_ts + 60}
+    return result
+
+
+# --- News Headlines ---
+
+@router.get("/news-headlines")
+async def get_news_headlines():
+    """Get latest Korean financial news headlines (einfomax + naver)."""
+    client = get_korean_news_client()
+    return client.cached_data
+
+
+# --- Economic Events ---
+
+@router.get("/economic-events")
+async def get_economic_events():
+    """Get today's economic events (EODHD)."""
+    client = get_eodhd_events_client()
+    return client.cached_data
